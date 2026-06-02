@@ -1,0 +1,3661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新疆北疆旅行攻略</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <style>
+        /* ========== 全局优化样式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 页面加载动画 */
+        @keyframes pageFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 粒子背景容器 */
+        #particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            animation: float linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            animation: pageFadeIn 0.8s ease-out;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3); }
+            50% { text-shadow: 3px 3px 20px rgba(255, 255, 255, 0.5); }
+        }
+
+        .mode-switch {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mode-btn {
+            padding: 14px 35px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.15em;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-weight: bold;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .mode-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .mode-btn.view {
+            background: white;
+            color: #f5576c;
+        }
+
+        .mode-btn.edit {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .mode-btn.active {
+            transform: scale(1.15) translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .mode-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .mode-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 25px;
+            font-size: 1em;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .mode-indicator.view-mode {
+            background: rgba(255, 255, 255, 0.35);
+            color: white;
+        }
+
+        .mode-indicator.edit-mode {
+            background: rgba(76, 175, 80, 0.85);
+            color: white;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #333;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '📅';
+            font-size: 1.3em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .schedule-week {
+            margin-bottom: 35px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .schedule-week:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .week-label {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .week-label::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 18px;
+        }
+
+        .day-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 18px 14px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            border-left: 6px solid;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .day-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .day-card:hover::before {
+            opacity: 1;
+        }
+
+        .edit-day-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 6px 15px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .edit-day-btn:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .day-card.edit-mode .edit-day-btn {
+            display: block;
+        }
+
+        .day-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.18);
+        }
+
+        .route-row {
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .route-row:hover {
+            background: linear-gradient(135deg, #e8f4f8 0%, #d4edf8 100%);
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .route-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .route-content {
+            display: block;
+            width: 100%;
+        }
+
+        .route-tag {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            margin: 3px;
+            font-weight: 600;
+        }
+
+        .route-tag:hover {
+            transform: scale(1.12) rotate(-3deg);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .route-arrow {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin: 0 5px;
+            animation: arrowBounce 2s infinite;
+        }
+
+        @keyframes arrowBounce {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(3px); }
+        }
+
+        .tags-container {
+            display: block;
+            width: 100%;
+            padding: 6px 0;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            white-space: nowrap;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tag::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .tag:hover::before {
+            left: 100%;
+        }
+
+        .tag:hover {
+            transform: scale(1.12) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .tag.scenic-1 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .tag.scenic-2 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+        .tag.scenic-3 { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+        .tag.scenic-4 { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; }
+        .tag.scenic-5 { background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%); }
+        .tag.scenic-6 { background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); }
+
+        .tag.food-1 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .tag.food-2 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #333; }
+        .tag.food-3 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .tag.food-4 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+        .tag.food-5 { background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%); color: #333; }
+        .tag.food-6 { background: linear-gradient(135deg, #fddb92 0%, #d1fdff 100%); color: #333; }
+
+        .tag.distance {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .tag.other {
+            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+            color: white;
+        }
+
+        .info-row {
+            padding: 8px 10px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .info-row:hover {
+            background: linear-gradient(135deg, #e8f4f8 0%, #f8f9fa 100%);
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9em;
+            display: block;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 0.9em;
+            word-break: break-word;
+            line-height: 1.5;
+            display: block;
+        }
+
+        .day-date {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .day-week {
+            font-size: 0.85em;
+            color: #888;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-top: 5px;
+        }
+
+        .day-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 6px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+
+        .info-row:hover {
+            background: #e8f4f8;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 0.85em;
+            min-width: 35px;
+            display: flex;
+            align-items: flex-start;
+            gap: 3px;
+        }
+
+        .info-value {
+            flex: 1;
+            color: #333;
+            font-size: 0.85em;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .info-value[contenteditable="true"] {
+            border: 1px dashed #ccc;
+            padding: 3px;
+            background: white;
+            min-height: 18px;
+        }
+
+        .info-value[contenteditable="true"]:focus {
+            border-color: #667eea;
+            outline: none;
+            background: #f0f4ff;
+        }
+
+
+
+        .map-section {
+            margin-top: 50px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .map-section .section-title::before {
+            content: '🗺️';
+            animation: pulse 2s infinite;
+        }
+
+        #map {
+            width: 100%;
+            height: calc(100vw * 0.6);
+            min-height: 400px;
+            max-height: 700px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        #map:hover {
+            box-shadow: 0 15px 60px rgba(0, 0, 0, 0.25);
+            border-color: rgba(102, 126, 234, 0.4);
+        }
+
+        .map-boundary-tip {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 12px 18px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            font-size: 0.9em;
+            color: #667eea;
+            z-index: 1000;
+            max-width: 260px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .map-boundary-tip:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .map-boundary-tip strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .map-control-btn {
+            padding: 12px 24px;
+            border: 2px solid #667eea;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            color: #667eea;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-control-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .map-control-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .map-control-btn:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .map-control-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .map-control-btn:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        .map-control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup-content {
+            padding: 10px;
+            max-width: 300px;
+        }
+
+        .popup-content h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .popup-content p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .popup-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .popup-delete-btn {
+            background: #f5576c;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .popup-delete-btn:hover {
+            background: #d43f52;
+        }
+
+        /* 特效动画 */
+        @keyframes fall {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100px) rotate(360deg);
+            }
+        }
+
+        @keyframes grow {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes deleteSuccess {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* 显示模式下禁止复制 */
+        body.no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .storage-info {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 18px 20px;
+            margin-bottom: 25px;
+            color: #856404;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(255, 193, 7, 0.3);
+            transition: all 0.3s ease;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .storage-info:hover {
+            box-shadow: 0 8px 30px rgba(255, 193, 7, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .storage-status-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .storage-icon {
+            font-size: 1.5em;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .storage-text {
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .storage-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .storage-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95em;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .storage-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .storage-btn:hover::before {
+            width: 200px;
+            height: 200px;
+        }
+
+        .storage-btn.save {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .storage-btn.load {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+        }
+
+        .storage-btn.clear {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+        }
+
+        .storage-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .storage-btn:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            margin: 8% auto;
+            padding: 35px;
+            border-radius: 25px;
+            width: 90%;
+            max-width: 550px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            animation: modalSlideDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border: 2px solid rgba(102, 126, 234, 0.1);
+        }
+
+        @keyframes modalSlideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-header h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-header h2::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+        }
+
+        .close-btn {
+            font-size: 1.8em;
+            cursor: pointer;
+            color: #888;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .close-btn:hover {
+            color: white;
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+            font-size: 1.05em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group label::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+            background: #ffffff;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.15em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .submit-btn:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .submit-btn:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        @media (max-width: 1200px) {
+            .schedule-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .schedule-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .map-controls {
+                flex-direction: column;
+            }
+
+            .mode-switch {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景效果 -->
+    <div id="particles-container"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🏔️ 新疆北疆旅行攻略</h1>
+            <p>2026 年 6 月 9 日 - 2026 年 6 月 22 日</p>
+            <div class="mode-switch">
+                <button class="mode-btn view active" onclick="switchMode('view')">👁️ 展现模式</button>
+                <button class="mode-btn edit" onclick="switchMode('edit')">✏️ 修改模式</button>
+            </div>
+            <div class="mode-indicator view-mode" id="mode-indicator">
+                <span id="mode-indicator-icon">🔒</span>
+                <span id="mode-indicator-text">当前为展现模式，内容不可编辑</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="storage-info">
+                <div class="storage-status-wrapper">
+                    <span class="storage-icon">💾</span>
+                    <span id="storage-status" class="storage-text">数据已自动保存</span>
+                </div>
+                <div class="storage-actions">
+                    <button class="storage-btn save" onclick="saveData()" title="导出备份文件">💾 备份</button>
+                    <button class="storage-btn load" onclick="loadData()" title="从文件导入">📂 导入</button>
+                    <button class="storage-btn clear" onclick="clearData()" title="清空所有数据">🗑️ 清空</button>
+                </div>
+            </div>
+
+            <h2 class="section-title">旅行日程表</h2>
+            <div id="schedule-container"></div>
+
+            <div class="map-section">
+                <h2 class="section-title">北疆旅行地图</h2>
+                <div class="map-controls" id="map-controls">
+                    <button class="map-control-btn" onclick="openLocationSearchModal()">🔍 搜索地点</button>
+                    <button class="map-control-btn" onclick="enableRouteTool()">🛣️ 绘制路线</button>
+                    <button class="map-control-btn" onclick="enableAddMarkerTool()">📍 手动选点</button>
+                    <button class="map-control-btn" onclick="openTextModal()">📝 添加文本</button>
+                    <button class="map-control-btn" onclick="openPhotoModal()">📷 添加图片</button>
+                    <button class="map-control-btn" onclick="clearMapTools()">❌ 取消工具</button>
+                    <button class="map-control-btn" onclick="resetMap()" style="margin-left: 8px;">🔄 重做</button>
+                </div>
+                <div id="map">
+                    <!-- 日期颜色对应显示 - 常态显示 -->
+                    <div id="date-color-legend" style="position: absolute; top: 70px; right: 10px; z-index: 1000; background: white; border-radius: 8px; padding: 10px 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                        <div style="font-size: 0.75em; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #e74c3c; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/9</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #3498db; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/10</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #2ecc71; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/11</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #f39c12; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/12</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #9b59b6; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/13</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #1abc9c; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/14</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #34495e; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/15</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.75em; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; margin-top: 5px;">
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #e91e63; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/16</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #00bcd4; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/17</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #8bc34a; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/18</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #ff9800; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/19</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #673ab7; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/20</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #009688; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/21</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 14px; height: 14px; background: #795548; border-radius: 50%; margin-bottom: 3px;"></div>
+                                <span style="font-size: 10px; color: #666;">6/22</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="map-boundary-tip">
+                        <strong>📍 地图范围提示</strong>
+                        地图已限制在新疆区域<br>
+                        最小缩放级别：5.5 级<br>
+                        最大缩放级别：13 级
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="text-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>📝 添加文本标注</h2>
+                <span class="close-btn" onclick="closeModal('text-modal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>文本内容</label>
+                <textarea id="text-content" placeholder="输入要添加的文本内容"></textarea>
+            </div>
+            <button class="submit-btn" onclick="confirmTextMarker()">确认添加</button>
+        </div>
+    </div>
+
+    <div class="modal" id="add-marker-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📍 手动选点添加地点</h2>
+                <span class="close-btn" onclick="closeModal('add-marker-modal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>地点名称</label>
+                <input type="text" id="marker-name" placeholder="输入地点名称，如：喀纳斯湖观景台">
+            </div>
+            <div class="form-group">
+                <label>标记颜色</label>
+                <select id="marker-color" style="width: 100%; padding: 14px 18px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1em;">
+                    <option value="#e74c3c">🔴 红色</option>
+                    <option value="#3498db">🔵 蓝色</option>
+                    <option value="#2ecc71">🟢 绿色</option>
+                    <option value="#f39c12">🟠 橙色</option>
+                    <option value="#9b59b6">🟣 紫色</option>
+                    <option value="#1abc9c">青色</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>地点描述</label>
+                <textarea id="marker-description" placeholder="输入地点描述信息（可选）"></textarea>
+            </div>
+            <div class="form-group">
+                <label>关联日期（可选）</label>
+                <select id="marker-date" style="width: 100%; padding: 14px 18px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1em;">
+                    <option value="">-- 选择日期 --</option>
+                </select>
+            </div>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                <strong>💡 使用说明：</strong>
+                <p style="margin-top: 8px; font-size: 0.9em;">点击"确认添加"后，在地图上点击想要标记的位置即可。</p>
+            </div>
+            <button class="submit-btn" onclick="confirmMarkerPlacement()">确认添加</button>
+        </div>
+    </div>
+
+    <div class="modal" id="photo-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📷 添加图片</h2>
+                <span class="close-btn" onclick="closeModal('photo-modal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>图片描述</label>
+                <input type="text" id="photo-caption" placeholder="输入图片描述">
+            </div>
+            <div class="form-group">
+                <label>图片 URL</label>
+                <input type="text" id="photo-url" placeholder="输入图片的网络地址">
+            </div>
+            <button class="submit-btn" onclick="confirmPhoto()">确认添加</button>
+        </div>
+    </div>
+
+    <div class="modal" id="location-search-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔍 搜索地点并标记</h2>
+                <span class="close-btn" onclick="closeModal('location-search-modal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>地点名称</label>
+                <input type="text" id="location-name" placeholder="输入地点名称，如：喀纳斯湖、天山天池" onkeypress="if(event.keyCode===13) searchLocation()">
+            </div>
+            <div class="form-group">
+                <label>标记名称（可选）</label>
+                <input type="text" id="location-marker-name" placeholder="输入标记显示的名称，留空则使用地点名称">
+            </div>
+            <button class="submit-btn" onclick="searchLocation()">🔍 搜索并标记</button>
+            <div id="search-results" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="route-modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>🛣️ 绘制路线</h2>
+                <span class="close-btn" onclick="closeModal('route-modal')">&times;</span>
+            </div>
+            <div style="padding: 20px;">
+                <p style="color: #667eea; margin-bottom: 15px;">
+                    <strong>使用说明：</strong><br>
+                    1. 选择行程日期，颜色将自动对应<br>
+                    2. 从下方地点列表中选择两个地点<br>
+                    3. 路线将自动绘制
+                </p>
+                <div class="form-group">
+                    <label>📅 选择日期</label>
+                    <input type="date" id="route-date" min="2026-06-09" max="2026-06-22" onchange="updateLocationSelector()">
+                </div>
+                
+                <!-- 地点选择面板 -->
+                <div id="location-selector" style="margin-top: 20px; display: none;">
+                    <div style="background: #fff; border: 2px solid #667eea; border-radius: 8px; padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong style="color: #667eea;">📍 选择地点</strong>
+                            <span id="selection-status" style="font-size: 0.85em; color: #999;">请选择起点</span>
+                        </div>
+                        <div id="location-tags" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 60px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                            <!-- 地点标签将动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="submit-btn" onclick="confirmRoute()" style="margin-top: 15px;">✓ 确认绘制路线</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="edit-day-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 编辑日程 - <span id="edit-day-title"></span></h2>
+                <span class="close-btn" onclick="closeModal('edit-day-modal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>🚗 路线（多个地点用逗号分隔，按顺序）</label>
+                <input type="text" id="edit-route" placeholder="例如：乌鲁木齐，天山天池，富蕴，可可托海">
+            </div>
+            <div class="form-group">
+                <label>🏞️ 景点（多个用逗号分隔）</label>
+                <input type="text" id="edit-scenic" placeholder="例如：喀纳斯湖，禾木村，五彩滩">
+            </div>
+            <div class="form-group">
+                <label>🍜 美食（多个用逗号分隔）</label>
+                <input type="text" id="edit-food" placeholder="例如：大盘鸡，烤包子，手抓饭">
+            </div>
+            <div class="form-group">
+                <label>📏 里程</label>
+                <input type="text" id="edit-distance" placeholder="例如：200km 或 5 小时">
+            </div>
+            <div class="form-group">
+                <label>📌 其他（特殊情况备注）</label>
+                <textarea id="edit-other" placeholder="例如：住宿安排、注意事项、天气情况等" style="min-height: 80px;"></textarea>
+            </div>
+            <button class="submit-btn" onclick="saveDayEdit()">保存修改</button>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'view';
+        let map;
+        let markers = [];
+        let routes = [];
+        // 日期到颜色的映射（14 天循环 7 种颜色）
+        const dateColorMap = {
+            '2026-06-09': '#e74c3c',  // 第 1 天 - 红色
+            '2026-06-10': '#3498db',  // 第 2 天 - 蓝色
+            '2026-06-11': '#2ecc71',  // 第 3 天 - 绿色
+            '2026-06-12': '#f39c12',  // 第 4 天 - 橙色
+            '2026-06-13': '#9b59b6',  // 第 5 天 - 紫色
+            '2026-06-14': '#1abc9c',  // 第 6 天 - 青色
+            '2026-06-15': '#34495e',  // 第 7 天 - 深蓝
+            '2026-06-16': '#e91e63',  // 第 8 天 - 粉红
+            '2026-06-17': '#00bcd4',  // 第 9 天 - 天蓝
+            '2026-06-18': '#8bc34a',  // 第 10 天 - 浅绿
+            '2026-06-19': '#ff9800',  // 第 11 天 - 深橙
+            '2026-06-20': '#673ab7',  // 第 12 天 - 深紫
+            '2026-06-21': '#009688',  // 第 13 天 - 深青
+            '2026-06-22': '#795548'   // 第 14 天 - 棕色
+        };
+
+        function getDateColor(dateStr) {
+            return dateColorMap[dateStr] || '#e74c3c';
+        }
+
+        function getDayNumber(dateStr) {
+             const startDate = new Date('2026-06-09');
+             const targetDate = new Date(dateStr);
+             const diffTime = targetDate - startDate;
+             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+             return diffDays > 0 ? diffDays : 1;
+         }
+
+        let currentTool = null;
+        let tempMarker = null;
+        let routeStartMarker = null;
+        let routeEndPoint = null;
+        let routeStartDate = null;
+        let routeColor = null;
+        let routePolylines = [];
+        let mapData = [];
+        let clickableMarkers = [];  // 存储可点击的标记
+
+        // 数据文件路径
+        const DATA_FILE_PATH = 'xinjiang_travel_data.json';
+        const STORAGE_KEY = 'xinjiang_travel_data';
+        const BACKUP_KEY = 'xinjiang_travel_backup_timestamp';
+        let appData = { days: {}, map: [], routes: [] };  // 内存中的数据缓存
+
+        // 从 localStorage 加载数据（优先）
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    appData = JSON.parse(saved);
+                    console.log('✓ 从 localStorage 加载数据成功');
+                    return appData;
+                }
+            } catch (error) {
+                console.log('从 localStorage 加载失败:', error);
+            }
+            return null;
+        }
+
+        // 保存到 localStorage（实时、静默）
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+                localStorage.setItem(BACKUP_KEY, Date.now().toString());
+                console.log('✓ 数据已保存到 localStorage');
+                return true;
+            } catch (error) {
+                console.error('保存到 localStorage 失败:', error);
+                // 如果 localStorage 满了，尝试清理
+                if (error.name === 'QuotaExceededError') {
+                    console.log('localStorage 空间不足，尝试清理...');
+                    // 可以添加清理逻辑
+                }
+                return false;
+            }
+        }
+
+        // 从文件加载数据（作为备份导入）
+        async function loadDataFromFile() {
+            try {
+                const response = await fetch(DATA_FILE_PATH + '?t=' + Date.now());
+                if (response.ok) {
+                    appData = await response.json();
+                    console.log('✓ 数据文件加载成功');
+                    // 加载后同步到 localStorage
+                    saveToLocalStorage();
+                    return appData;
+                }
+            } catch (error) {
+                console.log('数据文件不存在，从 localStorage 加载');
+                // 如果文件不存在，从 localStorage 加载
+                const localData = loadFromLocalStorage();
+                if (localData) {
+                    console.log('✓ 从 localStorage 恢复数据');
+                    return localData;
+                }
+            }
+            return { days: {}, map: [], routes: [] };
+        }
+
+        // 导出数据到文件（手动备份）
+        function exportDataToFile() {
+            try {
+                const dataStr = JSON.stringify(appData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `xinjiang_travel_backup_${new Date().toISOString().slice(0,10)}_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log('✓ 数据已导出到文件');
+                return true;
+            } catch (error) {
+                console.error('导出数据失败:', error);
+                return false;
+            }
+        }
+
+        // 更新内存中的数据并实时保存到 localStorage
+        function updateAppData(newData) {
+            if (newData.days) appData.days = newData.days;
+            if (newData.map) appData.map = newData.map;
+            if (newData.routes) appData.routes = newData.routes;
+            
+            // 实时保存到 localStorage（静默、无提示）
+            saveToLocalStorage();
+            updateStorageStatus('✓ 已自动保存');
+        }
+
+        const startDate = new Date('2026-06-09');
+        const totalDays = 14;
+
+        const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        let currentEditDate = null;
+
+        function initSchedule() {
+            const container = document.getElementById('schedule-container');
+            container.innerHTML = '';
+
+            for (let week = 0; week < 2; week++) {
+                const weekDiv = document.createElement('div');
+                weekDiv.className = 'schedule-week';
+                
+                const weekLabel = document.createElement('div');
+                weekLabel.className = 'week-label';
+                const weekStart = new Date(startDate);
+                weekStart.setDate(weekStart.getDate() + week * 7);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                weekLabel.textContent = `第${week + 1}周：${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`;
+                weekDiv.appendChild(weekLabel);
+
+                const grid = document.createElement('div');
+                grid.className = 'schedule-grid';
+
+                for (let day = 0; day < 7; day++) {
+                    const dayIndex = week * 7 + day;
+                    if (dayIndex >= totalDays) break;
+
+                    const currentDate = new Date(startDate);
+                    currentDate.setDate(currentDate.getDate() + dayIndex);
+
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const dayNum = currentDate.getDate();
+                    const month = currentDate.getMonth() + 1;
+                    const weekDay = weekDays[currentDate.getDay()];
+
+                    // 使用 appData 而不是 localStorage
+                    const dayData = appData.days[dateStr] || {};
+
+                    const card = document.createElement('div');
+                    card.className = 'day-card';
+                    if (currentMode === 'edit') {
+                        card.classList.add('edit-mode');
+                    }
+                    
+                    // 根据日期设置卡片边框颜色
+                    const dateColor = getDateColor(dateStr);
+                    card.style.borderLeftColor = dateColor;
+                    
+                    let contentHtml = '';
+                    
+                    if (dayData.route && dayData.route.length > 0) {
+                        let routeTags = '';
+                        dayData.route.forEach((r, index) => {
+                            if (index > 0) routeTags += '<span class="route-arrow">→</span>';
+                            routeTags += `<span class="route-tag">${r}</span>`;
+                        });
+                        contentHtml += `
+                            <div class="route-row">
+                                <div class="route-label">路线</div>
+                                <div class="route-content">
+                                    ${routeTags}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (dayData.scenic && dayData.scenic.length > 0) {
+                        let scenicTags = '';
+                        dayData.scenic.forEach((s, index) => {
+                            const colorIndex = (index % 6) + 1;
+                            scenicTags += `<span class="tag scenic-${colorIndex}">${s}</span>`;
+                        });
+                        contentHtml += `
+                            <div class="info-row">
+                                <div class="info-label">景点</div>
+                                <div class="tags-container">
+                                    ${scenicTags}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (dayData.food && dayData.food.length > 0) {
+                        let foodTags = '';
+                        dayData.food.forEach((f, index) => {
+                            const colorIndex = (index % 6) + 1;
+                            foodTags += `<span class="tag food-${colorIndex}">${f}</span>`;
+                        });
+                        contentHtml += `
+                            <div class="info-row">
+                                <div class="info-label">美食</div>
+                                <div class="tags-container">
+                                    ${foodTags}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (dayData.distance) {
+                        contentHtml += `
+                            <div class="info-row">
+                                <div class="info-label">里程</div>
+                                <div class="info-value"><span class="tag distance">${dayData.distance}</span></div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (dayData.other && dayData.other.trim()) {
+                        contentHtml += `
+                            <div class="info-row">
+                                <div class="info-label">其他</div>
+                                <div class="info-value">${dayData.other}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    card.innerHTML = `
+                        <button class="edit-day-btn" onclick="openEditDayModal('${dateStr}', '${month}/${dayNum}')">✏️ 编辑</button>
+                        <div class="day-header">
+                            <div class="day-date">${month}/${dayNum}</div>
+                            <div class="day-week">${weekDay}</div>
+                        </div>
+                        <div class="day-content">
+                            ${contentHtml}
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                }
+
+                weekDiv.appendChild(grid);
+                container.appendChild(weekDiv);
+            }
+        }
+
+        function initMap() {
+            setTimeout(() => {
+                try {
+                    // 定义新疆区域的边界（扩大范围，确保包含完整新疆）
+                    const xinjiangBounds = [
+                        [34.0, 70.0],  // 西南角（纬度，经度）
+                        [52.0, 98.0]   // 东北角（纬度，经度）
+                    ];
+                    
+                    map = L.map('map', {
+                        center: [44.5, 85.5],
+                        zoom: 6,
+                        zoomControl: true,
+                        scrollWheelZoom: true,
+                        fadeAnimation: true,
+                        zoomAnimation: true,
+                        minZoom: 5.5,  // 最小缩放级别
+                        maxZoom: 13,  // 最大缩放级别
+                        zoomSnap: 0.5,  // 缩放粒度，值越大缩放越平滑
+                        zoomDelta: 0.5,  // 每次缩放的变化量
+                        wheelPxPerZoomLevel: 120,  // 鼠标滚轮缩放速度，值越大越慢
+                        maxBounds: xinjiangBounds,  // 限制地图显示范围
+                        maxBoundsViscosity: 1.0     // 完全限制，不允许拖出边界
+                    });
+
+                    // 使用高德地图（中文显示，国内加载快）
+                    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}', {
+                        attribution: '&copy; <a href="https://www.amap.com/">高德地图</a>',
+                        maxZoom: 13,
+                        minZoom: 5.5,
+                        subdomains: ['1', '2', '3', '4']
+                    }).addTo(map);
+
+                    // 显示模式下添加点击特效（全网页范围）
+                    // 注意：删除模式优先，删除模式下不触发特效
+                    console.log('初始化显示模式点击特效，currentMode =', currentMode);
+                    
+                    // 为整个文档添加点击事件（捕获阶段）
+                    document.addEventListener('click', createClickEffect, true);
+
+                    setTimeout(() => {
+                        map.invalidateSize();
+                        map._onResize();
+                    }, 200);
+                    
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 1000);
+                } catch (e) {
+                    console.error('地图初始化失败:', e);
+                }
+            }, 200);
+        }
+
+        // getDayData 函数已删除，直接使用 appData.days[dateStr]
+
+        function openEditDayModal(dateStr, dayTitle) {
+            if (currentMode !== 'edit') return;
+            
+            currentEditDate = dateStr;
+            document.getElementById('edit-day-title').textContent = dayTitle;
+            
+            const dayData = getDayData(dateStr);
+            
+            const routeArr = [];
+            if (dayData.start) routeArr.push(dayData.start);
+            if (dayData.destination) routeArr.push(dayData.destination);
+            if (dayData.route) {
+                dayData.route.forEach(r => routeArr.push(r));
+            }
+            document.getElementById('edit-route').value = routeArr.join(', ');
+            
+            document.getElementById('edit-scenic').value = dayData.scenic ? dayData.scenic.join(', ') : '';
+            document.getElementById('edit-food').value = dayData.food ? dayData.food.join(', ') : '';
+            document.getElementById('edit-distance').value = dayData.distance || '';
+            document.getElementById('edit-other').value = dayData.other || '';
+            
+            document.getElementById('edit-day-modal').style.display = 'block';
+        }
+
+        function saveDayEdit() {
+            if (!currentEditDate) return;
+            
+            if (!appData.days[currentEditDate]) {
+                appData.days[currentEditDate] = {};
+            }
+            
+            const routeText = document.getElementById('edit-route').value.trim();
+            appData.days[currentEditDate].route = routeText ? routeText.split(/[,，,]/).map(r => r.trim()).filter(r => r) : [];
+            appData.days[currentEditDate].start = null;
+            appData.days[currentEditDate].destination = null;
+            
+            const scenicText = document.getElementById('edit-scenic').value.trim();
+            appData.days[currentEditDate].scenic = scenicText ? scenicText.split(/[,，,]/).map(s => s.trim()).filter(s => s) : [];
+            
+            const foodText = document.getElementById('edit-food').value.trim();
+            appData.days[currentEditDate].food = foodText ? foodText.split(/[,，,]/).map(f => f.trim()).filter(f => f) : [];
+            
+            appData.days[currentEditDate].distance = document.getElementById('edit-distance').value.trim();
+            appData.days[currentEditDate].other = document.getElementById('edit-other').value.trim();
+            
+            // 更新数据并保存
+            updateAppData({ days: appData.days });
+            
+            closeModal('edit-day-modal');
+            initSchedule();
+            updateStorageStatus('日程已保存');
+        }
+
+        function updateDayData(dateStr, field, value) {
+            if (currentMode !== 'edit') return;
+
+            if (!appData.days[dateStr]) {
+                appData.days[dateStr] = {};
+            }
+
+            if (field === 'scenic' || field === 'food') {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(value, 'text/html');
+                const tags = Array.from(doc.querySelectorAll('.tag')).map(tag => tag.textContent);
+                appData.days[dateStr][field] = tags;
+            } else {
+                appData.days[dateStr][field] = value.trim();
+            }
+            
+            // 更新数据并保存
+            updateAppData({ days: appData.days });
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // 显示模式下禁止复制
+            if (mode === 'view') {
+                document.body.classList.add('no-select');
+            } else {
+                document.body.classList.remove('no-select');
+            }
+            
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.mode-btn.${mode}`).classList.add('active');
+
+            const indicator = document.getElementById('mode-indicator');
+            const indicatorIcon = document.getElementById('mode-indicator-icon');
+            const indicatorText = document.getElementById('mode-indicator-text');
+
+            if (mode === 'view') {
+                indicator.className = 'mode-indicator view-mode';
+                indicatorIcon.textContent = '🔒';
+                indicatorText.textContent = '当前为展现模式，内容不可编辑';
+            } else {
+                indicator.className = 'mode-indicator edit-mode';
+                indicatorIcon.textContent = '✏️';
+                indicatorText.textContent = '当前为修改模式，可以编辑内容';
+            }
+
+            initSchedule();
+            
+            document.querySelectorAll('.map-control-btn').forEach(btn => {
+                btn.disabled = mode !== 'edit';
+            });
+        }
+
+        function enableRouteTool() {
+            if (currentMode !== 'edit') return;
+            
+            // 先退出删除模式（如果存在）
+            if (deleteMode) {
+                exitDeleteMode();
+            }
+            
+            resetToolState();
+            currentTool = 'route';
+            document.querySelector('button[onclick="enableRouteTool()"]').classList.add('active');
+            map.getContainer().style.cursor = 'crosshair';
+            
+            // 打开路线设置模态框
+            setTimeout(() => {
+                openRouteModal();
+            }, 300);
+        }
+
+        // 手动选点添加地点工具
+        let isAddingMarker = false;
+        let pendingMarkerData = null;
+
+        function enableAddMarkerTool() {
+            if (currentMode !== 'edit') return;
+            
+            // 先退出删除模式（如果存在）
+            if (deleteMode) {
+                exitDeleteMode();
+            }
+            
+            resetToolState();
+            currentTool = 'addMarker';
+            document.querySelector('button[onclick="enableAddMarkerTool()"]').classList.add('active');
+            
+            // 填充日期选择器
+            populateDateSelector();
+            
+            // 打开手动选点模态框
+            setTimeout(() => {
+                document.getElementById('add-marker-modal').style.display = 'block';
+            }, 300);
+        }
+
+        function populateDateSelector() {
+            const dateSelect = document.getElementById('marker-date');
+            dateSelect.innerHTML = '<option value="">-- 选择日期 --</option>';
+            
+            for (let i = 0; i < totalDays; i++) {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+                const dateStr = date.toISOString().slice(0, 10);
+                const weekDay = date.getDay();
+                const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = `${month}/${day} ${weekDays[weekDay]}`;
+                dateSelect.appendChild(option);
+            }
+        }
+
+        function confirmMarkerPlacement() {
+            const name = document.getElementById('marker-name').value.trim();
+            const color = document.getElementById('marker-color').value;
+            const description = document.getElementById('marker-description').value.trim();
+            const date = document.getElementById('marker-date').value;
+            
+            if (!name) {
+                alert('请输入地点名称');
+                return;
+            }
+            
+            // 保存待定的标记数据
+            pendingMarkerData = {
+                name: name,
+                color: color,
+                description: description,
+                date: date
+            };
+            
+            // 关闭模态框
+            closeModal('add-marker-modal');
+            
+            // 进入选点模式
+            isAddingMarker = true;
+            map.getContainer().style.cursor = 'crosshair';
+            
+            // 添加一次性点击事件监听器
+            const clickHandler = function(e) {
+                handleMapClickForMarker(e.latlng);
+                // 移除事件监听器
+                map.off('click', clickHandler);
+            };
+            
+            map.on('click', clickHandler);
+            
+            // 提示用户
+            updateStorageStatus('👆 请在地图上点击选择位置（ESC 取消）');
+            
+            // 添加 ESC 键取消
+            const escHandler = function(e) {
+                if (e.key === 'Escape') {
+                    isAddingMarker = false;
+                    pendingMarkerData = null;
+                    resetToolState();
+                    map.off('click', clickHandler);
+                    document.removeEventListener('keydown', escHandler);
+                    updateStorageStatus('✓ 已取消添加');
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        }
+
+        // 处理地图点击事件用于添加标记
+        function handleMapClickForMarker(latlng) {
+            if (!isAddingMarker || !pendingMarkerData) return;
+            
+            // 创建标记 - 使用与搜索地点一致的水滴状图标
+            const marker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `
+                        <div style="text-align: center;">
+                            <div style="background-color: ${pendingMarkerData.color}; width: 30px; height: 40px; border-radius: 50% 50% 50% 0; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); margin: 0 auto; position: relative;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
+                            </div>
+                            <div style="background: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.2);">${pendingMarkerData.name}</div>
+                        </div>
+                    `,
+                    iconSize: [80, 50],
+                    iconAnchor: [40, 25]
+                })
+            });
+            
+            // 设置标记数据
+            marker.markerData = {
+                name: pendingMarkerData.name,
+                color: pendingMarkerData.color,
+                description: pendingMarkerData.description || '',
+                type: 'marker',
+                date: pendingMarkerData.date || '',
+                latlng: latlng
+            };
+            
+            // 添加到地图
+            marker.addTo(map);
+            markers.push(marker);
+            
+            // 添加弹出框
+            let popupContent = `<strong>${pendingMarkerData.name}</strong>`;
+            if (pendingMarkerData.description) {
+                popupContent += `<p style="margin-top: 5px;">${pendingMarkerData.description}</p>`;
+            }
+            if (pendingMarkerData.date) {
+                const dateObj = new Date(pendingMarkerData.date);
+                const month = dateObj.getMonth() + 1;
+                const day = dateObj.getDate();
+                popupContent += `<p style="margin-top: 5px; color: #667eea;">📅 ${month}/${day}</p>`;
+            }
+            marker.bindPopup(popupContent);
+            
+            // 保存数据
+            saveMapData();
+            
+            // 重置状态
+            isAddingMarker = false;
+            pendingMarkerData = null;
+            resetToolState();
+            
+            updateStorageStatus('✓ 地点已添加');
+        }
+
+        function openRouteModal() {
+            // 设置默认日期为行程开始日期
+            const defaultDate = '2026-06-09';
+            document.getElementById('route-date').value = defaultDate;
+            document.getElementById('route-modal').style.display = 'block';
+            updateLocationSelector();
+        }
+
+        function updateLocationSelector() {
+            const selectedDate = document.getElementById('route-date').value;
+            const locationSelector = document.getElementById('location-selector');
+            const locationTags = document.getElementById('location-tags');
+            
+            if (!selectedDate) {
+                locationSelector.style.display = 'none';
+                return;
+            }
+            
+            locationSelector.style.display = 'block';
+            
+            // 生成地点标签
+            locationTags.innerHTML = '';
+            
+            if (markers.length === 0) {
+                locationTags.innerHTML = '<p style="color: #999; font-size: 0.85em; padding: 10px;">暂无标记地点，请先添加标记</p>';
+                return;
+            }
+            
+            markers.forEach((marker, index) => {
+                if (!marker.markerData) return;
+                
+                const tag = document.createElement('div');
+                tag.className = 'location-tag';
+                tag.style.cssText = `
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px;
+                    background: white;
+                    border: 2px solid ${marker.markerData.color};
+                    border-radius: 20px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-size: 0.85em;
+                    user-select: none;
+                `;
+                
+                tag.innerHTML = `
+                    <span style="display: inline-block; width: 10px; height: 10px; background: ${marker.markerData.color}; border-radius: 50%;"></span>
+                    <span style="font-weight: bold; color: #333;">${marker.markerData.name}</span>
+                `;
+                
+                tag.onclick = () => selectLocation(index, tag);
+                
+                locationTags.appendChild(tag);
+            });
+        }
+
+        let selectedLocations = [];
+
+        function selectLocation(markerIndex, tagElement) {
+            const marker = markers[markerIndex];
+            if (!marker || !marker.markerData) return;
+            
+            // 检查是否已选择
+            const existingIndex = selectedLocations.findIndex(item => item.markerIndex === markerIndex);
+            
+            if (existingIndex >= 0) {
+                // 取消选择
+                selectedLocations.splice(existingIndex, 1);
+                tagElement.style.background = 'white';
+                tagElement.style.transform = 'scale(1)';
+                tagElement.style.color = '#333';
+            } else {
+                // 添加选择
+                if (selectedLocations.length >= 2) {
+                    // 已经选了 2 个，不能选更多，提示用户先取消
+                    alert('最多只能选择两个地点，请先取消已选择的地点');
+                    return;
+                }
+                
+                selectedLocations.push({
+                    markerIndex: markerIndex,
+                    latlng: marker.getLatLng(),
+                    name: marker.markerData.name,
+                    color: marker.markerData.color
+                });
+                
+                tagElement.style.background = marker.markerData.color;
+                tagElement.style.transform = 'scale(1.05)';
+                tagElement.style.color = 'white';
+            }
+            
+            // 更新状态提示
+            updateSelectionStatus();
+        }
+
+        function updateSelectionStatus() {
+            const statusEl = document.getElementById('selection-status');
+            
+            if (selectedLocations.length === 0) {
+                statusEl.textContent = '请选择起点';
+                statusEl.style.color = '#999';
+            } else if (selectedLocations.length === 1) {
+                statusEl.textContent = `已选起点：${selectedLocations[0].name}，请选择终点`;
+                statusEl.style.color = '#667eea';
+            } else {
+                statusEl.textContent = `✓ 已选：${selectedLocations[0].name} → ${selectedLocations[1].name}`;
+                statusEl.style.color = '#2ecc71';
+            }
+        }
+
+        let deleteMode = false;  // 删除模式标志
+
+        // 清除工具状态（不触发删除模式）
+        function resetToolState() {
+            currentTool = null;
+            isAddingMarker = false;
+            pendingMarkerData = null;
+            routeStartMarker = null;
+            document.querySelectorAll('.map-control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            map.getContainer().style.cursor = '';
+        }
+
+        function clearMapTools() {
+            // 如果正在添加标记，取消添加
+            if (isAddingMarker) {
+                isAddingMarker = false;
+                pendingMarkerData = null;
+                resetToolState();
+                updateStorageStatus('✓ 已取消添加');
+                return;
+            }
+            
+            // 如果是删除模式，退出删除模式
+            if (deleteMode) {
+                exitDeleteMode();
+                return;
+            }
+            
+            // 检查是否在编辑模式
+            if (currentMode !== 'edit') {
+                alert('请先切换到编辑模式');
+                return;
+            }
+            
+            // 否则进入删除模式
+            deleteMode = true;
+            const btn = document.querySelector('button[onclick="clearMapTools()"]');
+            if (btn) {
+                btn.classList.add('active');
+                btn.innerHTML = '❌ 删除模式（点击元素删除）';
+            }
+            map.getContainer().style.cursor = 'crosshair';
+            
+            // 禁用所有标记的 popup，防止干扰删除
+            markers.forEach(marker => {
+                if (marker.getPopup()) {
+                    marker._popupBackup = marker.getPopup().getContent();
+                    marker.unbindPopup();
+                }
+            });
+            
+            // 添加删除提示
+            const deleteTip = L.control({position: 'topright'});
+            deleteTip.onAdd = function() {
+                const div = L.DomUtil.create('div', 'delete-tip');
+                div.style.cssText = 'background: #f5576c; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                div.innerHTML = '🗑️ 删除模式：点击地点、路线或文本进行删除（再次点击"❌ 取消工具"退出）';
+                return div;
+            };
+            deleteTip.addTo(map);
+            deleteTipControl = deleteTip;
+            
+            // 确保之前的事件监听器已移除，然后添加新的
+            map.off('click', handleDeleteClick);
+            map.on('click', handleDeleteClick);
+            
+            console.log('进入删除模式，currentMode =', currentMode, 'deleteMode =', deleteMode);
+            console.log('地图对象:', map);
+        }
+
+        let deleteTipControl = null;
+
+        function exitDeleteMode() {
+            deleteMode = false;
+            const btn = document.querySelector('button[onclick="clearMapTools()"]');
+            if (btn) {
+                btn.classList.remove('active');
+                btn.innerHTML = '❌ 取消工具';
+            }
+            map.getContainer().style.cursor = '';
+            
+            // 恢复所有标记的 popup
+            markers.forEach(marker => {
+                if (marker._popupBackup) {
+                    marker.bindPopup(marker._popupBackup);
+                    delete marker._popupBackup;
+                }
+            });
+            
+            // 移除提示
+            if (deleteTipControl) {
+                map.removeControl(deleteTipControl);
+                deleteTipControl = null;
+            }
+            
+            // 移除点击事件
+            map.off('click', handleDeleteClick);
+        }
+
+        // 计算点到线段的距离（单位：米）
+        function pointToSegmentDistance(point, segmentStart, segmentEnd) {
+            const A = segmentStart.distanceTo(segmentEnd);
+            const B = point.distanceTo(segmentStart);
+            const C = point.distanceTo(segmentEnd);
+            
+            // 如果线段长度为 0，返回点到端点的距离
+            if (A === 0) return B;
+            
+            // 计算投影参数 t
+            const t = Math.max(0, Math.min(1, (B * B + A * A - C * C) / (2 * A * A)));
+            
+            // 计算投影点
+            const projectionLat = segmentStart.lat + t * (segmentEnd.lat - segmentStart.lat);
+            const projectionLng = segmentStart.lng + t * (segmentEnd.lng - segmentStart.lng);
+            const projection = L.latLng(projectionLat, projectionLng);
+            
+            // 返回点到投影点的距离
+            return point.distanceTo(projection);
+        }
+
+        // 计算点到线段的屏幕像素距离
+        function pointToSegmentPixelDistance(point, segmentStart, segmentEnd) {
+            const A = Math.sqrt(Math.pow(segmentEnd.x - segmentStart.x, 2) + Math.pow(segmentEnd.y - segmentStart.y, 2));
+            const B = Math.sqrt(Math.pow(point.x - segmentStart.x, 2) + Math.pow(point.y - segmentStart.y, 2));
+            const C = Math.sqrt(Math.pow(point.x - segmentEnd.x, 2) + Math.pow(point.y - segmentEnd.y, 2));
+            
+            // 如果线段长度为 0，返回点到端点的距离
+            if (A === 0) return B;
+            
+            // 计算投影参数 t
+            const t = Math.max(0, Math.min(1, (B * B + A * A - C * C) / (2 * A * A)));
+            
+            // 计算投影点
+            const projectionX = segmentStart.x + t * (segmentEnd.x - segmentStart.x);
+            const projectionY = segmentStart.y + t * (segmentEnd.y - segmentStart.y);
+            
+            // 返回点到投影点的像素距离
+            return Math.sqrt(Math.pow(point.x - projectionX, 2) + Math.pow(point.y - projectionY, 2));
+        }
+
+        // 显示删除成功的❌标记
+        function showDeleteSuccess(latlng) {
+            const successMarker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'delete-success',
+                    html: '<div style="font-size: 40px; color: #f5576c; animation: deleteSuccess 0.5s ease-out forwards; transform: scale(0);">❌</div>',
+                    iconSize: [50, 50]
+                })
+            }).addTo(map);
+            
+            // 1 秒后移除
+            setTimeout(() => {
+                map.removeLayer(successMarker);
+            }, 1000);
+        }
+
+        function handleDeleteClick(e) {
+            console.log('删除模式点击事件触发');
+            console.log('事件对象类型:', e.constructor.name);
+            console.log('e.latlng:', e.latlng);
+            console.log('e.originalEvent:', e.originalEvent);
+            console.log('deleteMode:', deleteMode, 'currentMode:', currentMode);
+            
+            if (!deleteMode || currentMode !== 'edit') {
+                console.log('删除模式条件不满足，直接返回');
+                return;
+            }
+            
+            // 确保 e.latlng 有效 - 检查是否为 Leaflet 的 LatLng 对象
+            let clickLatLng = null;
+            
+            if (e.latlng && typeof e.latlng.lat === 'number' && typeof e.latlng.lng === 'number') {
+                // Leaflet 事件对象，直接使用
+                clickLatLng = e.latlng;
+                console.log('使用 Leaflet 坐标:', clickLatLng);
+            } else if (e.originalEvent) {
+                // DOM 事件，需要转换
+                console.log('Leaflet 坐标无效，尝试从 DOM 事件转换');
+                const mapContainer = map.getContainer();
+                const rect = mapContainer.getBoundingClientRect();
+                
+                // 考虑页面滚动
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                
+                const x = e.originalEvent.clientX + scrollLeft - rect.left;
+                const y = e.originalEvent.clientY + scrollTop - rect.top;
+                
+                console.log('DOM 点击坐标：clientX=' + e.originalEvent.clientX.toFixed(2) + ', clientY=' + e.originalEvent.clientY.toFixed(2));
+                console.log('地图边界：top=' + rect.top.toFixed(2) + ', left=' + rect.left.toFixed(2) + ', width=' + rect.width.toFixed(2) + ', height=' + rect.height.toFixed(2));
+                console.log('滚动偏移：scrollLeft=' + scrollLeft.toFixed(2) + ', scrollTop=' + scrollTop.toFixed(2));
+                console.log('相对坐标：x=' + x.toFixed(2) + ', y=' + y.toFixed(2));
+                
+                try {
+                    clickLatLng = map.containerPointToLatLng({x, y});
+                    console.log('转换后的坐标:', clickLatLng);
+                } catch (err) {
+                    console.error('坐标转换失败:', err);
+                    return;
+                }
+            } else {
+                console.log('无法获取有效坐标，退出');
+                return;
+            }
+            
+            let deleted = false;
+            
+            // 获取点击位置的屏幕坐标
+            const mapContainer = map.getContainer();
+            const rect = mapContainer.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            const clickPoint = map.latLngToContainerPoint(clickLatLng);
+            
+            console.log('开始检查标记，数量:', markers.length);
+            console.log('点击坐标:', clickLatLng);
+            console.log('点击屏幕坐标:', clickPoint);
+            
+            for (let i = markers.length - 1; i >= 0; i--) {
+                const marker = markers[i];
+                const markerLatLng = marker.getLatLng();
+                const markerPoint = map.latLngToContainerPoint(markerLatLng);
+                
+                console.log('标记', i, '名称:', marker.markerData?.name || '未命名');
+                console.log('  标记坐标:', markerLatLng);
+                console.log('  标记屏幕坐标:', markerPoint);
+                
+                // 计算屏幕像素距离（不受缩放影响）
+                const pixelDistance = Math.sqrt(
+                    Math.pow(clickPoint.x - markerPoint.x, 2) + 
+                    Math.pow(clickPoint.y - markerPoint.y, 2)
+                );
+                console.log('  像素距离:', pixelDistance.toFixed(2), 'px');
+                
+                // 如果像素距离小于 30 像素，认为是点击了这个标记
+                if (pixelDistance < 30) {
+                    console.log('✅ 删除标记', i);
+                    map.removeLayer(marker);
+                    markers.splice(i, 1);
+                    deleted = true;
+                    saveMapData();
+                    updateStorageStatus('已删除标记');
+                    
+                    // 显示删除成功的❌标记
+                    showDeleteSuccess(clickLatLng);
+                    break;
+                }
+            }
+            
+            // 如果没有删除标记，检查是否点击了路线
+            if (!deleted) {
+                console.log('开始检查路线，数量:', routePolylines.length);
+                for (let i = routePolylines.length - 1; i >= 0; i--) {
+                    const route = routePolylines[i];
+                    const polyline = route.polyline;
+                    
+                    if (polyline) {
+                        const latlngs = polyline.getLatLngs();
+                        let minPixelDistance = Infinity;
+                        
+                        // 检查点击位置到每一段线段的屏幕像素距离
+                        for (let j = 0; j < latlngs.length - 1; j++) {
+                            const segmentStart = latlngs[j];
+                            const segmentEnd = latlngs[j + 1];
+                            
+                            // 转换为屏幕坐标
+                            const startPoint = map.latLngToContainerPoint(segmentStart);
+                            const endPoint = map.latLngToContainerPoint(segmentEnd);
+                            
+                            // 计算点击点到线段的像素距离
+                            const pixelDist = pointToSegmentPixelDistance(clickPoint, startPoint, endPoint);
+                            
+                            if (pixelDist < minPixelDistance) {
+                                minPixelDistance = pixelDist;
+                            }
+                            
+                            if (pixelDist < 15) {  // 15 像素内认为点击了路线
+                                console.log('✅ 点击路线段', j, '->', j+1, '像素距离:', pixelDist.toFixed(2), 'px');
+                                
+                                console.log('✅ 删除路线', i);
+                                // 删除路线相关的所有元素
+                                if (route.polyline) map.removeLayer(route.polyline);
+                                if (route.marker) map.removeLayer(route.marker);
+                                if (route.startMarker) map.removeLayer(route.startMarker);
+                                if (route.routingControl) map.removeControl(route.routingControl);
+                                
+                                routePolylines.splice(i, 1);
+                                deleted = true;
+                                saveRouteData();
+                                updateStorageStatus('已删除路线');
+                                
+                                // 显示删除成功的❌标记
+                                showDeleteSuccess(clickLatLng);
+                                break;
+                            }
+                        }
+                        
+                        if (deleted) break;
+                        
+                        // 如果没找到，记录最小像素距离用于调试
+                        console.log('路线', i, '最小像素距离:', minPixelDistance.toFixed(2), 'px');
+                    }
+                }
+            }
+            
+            if (!deleted) {
+                console.log('未删除任何内容');
+                // 显示删除提示
+                const tempMarker = L.marker(clickLatLng, {
+                    icon: L.divIcon({
+                        className: 'delete-marker',
+                        html: '<div style="font-size: 30px; color: #f5576c;"></div>',
+                        iconSize: [40, 40]
+                    })
+                }).addTo(map);
+                
+                setTimeout(() => {
+                    map.removeLayer(tempMarker);
+                }, 1000);
+            }
+        }
+
+        function resetMap() {
+            if (confirm('确定要清空地图上绘制的所有内容吗？此操作不可恢复！')) {
+                // 先退出删除模式
+                if (deleteMode) {
+                    exitDeleteMode();
+                }
+                
+                // 清除所有标记
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                
+                // 清除所有路线
+                routePolylines.forEach(route => {
+                    if (route.polyline) map.removeLayer(route.polyline);
+                    if (route.marker) map.removeLayer(route.marker);
+                    if (route.startMarker) map.removeLayer(route.startMarker);
+                    if (route.routingControl) map.removeControl(route.routingControl);
+                });
+                routePolylines = [];
+                
+                // 清除 appData 中的地图数据
+                appData.map = [];
+                appData.routes = [];
+                
+                // 更新数据并保存
+                updateAppData({ map: [], routes: [] });
+                
+                // 重置状态
+                selectedLocations = [];
+                resetToolState();
+                
+                updateStorageStatus('地图已重置');
+            }
+        }
+
+        // 全局点击特效函数（不依赖地图）
+        function createClickEffect(e) {
+            // 如果在删除模式，不触发特效
+            if (deleteMode) {
+                console.log('删除模式，跳过特效');
+                return;
+            }
+            
+            if (currentMode === 'view') {
+                console.log('显示模式，创建特效，目标:', e.target.tagName);
+                // 阻止默认行为（如链接跳转等）
+                if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                }
+                
+                // 随机选择特效类型
+                const effectType = Math.random() > 0.5 ? 'snow' : 'forest';
+                
+                // 获取点击的屏幕坐标
+                const x = e.clientX;
+                const y = e.clientY;
+                
+                console.log('点击坐标：clientX=' + x.toFixed(2) + ', clientY=' + y.toFixed(2));
+                
+                // 创建 DOM 特效
+                if (effectType === 'snow') {
+                    createDOMSnowEffect(x, y);
+                } else {
+                    createDOMForestEffect(x, y);
+                }
+            } else {
+                console.log('非显示模式，跳过特效');
+            }
+        }
+
+        // 创建 DOM 雪花特效（不依赖地图）
+        function createDOMSnowEffect(x, y) {
+            const snowflakeCount = 20;
+            
+            for (let i = 0; i < snowflakeCount; i++) {
+                const offsetX = (Math.random() - 0.5) * 100;  // 水平偏移 -50 到 50px
+                const offsetY = (Math.random() - 0.5) * 100;  // 垂直偏移 -50 到 50px
+                
+                const snowflake = document.createElement('div');
+                snowflake.style.cssText = `
+                    position: fixed;
+                    left: ${x + offsetX}px;
+                    top: ${y + offsetY}px;
+                    font-size: ${10 + Math.random() * 10}px;
+                    color: white;
+                    text-shadow: 0 0 3px #667eea;
+                    animation: fall ${1 + Math.random() * 2}s linear forwards;
+                    pointer-events: none;
+                    z-index: 9999;
+                `;
+                snowflake.innerHTML = '❄️';
+                document.body.appendChild(snowflake);
+                
+                // 3 秒后移除
+                setTimeout(() => {
+                    if (snowflake.parentNode) {
+                        snowflake.parentNode.removeChild(snowflake);
+                    }
+                }, 3000);
+            }
+            
+            console.log('创建 DOM 雪花特效，位置：', x, y);
+        }
+
+        // 创建 DOM 森林特效（不依赖地图）
+        function createDOMForestEffect(x, y) {
+            const treeCount = 15;
+            const treeIcons = ['🌲', '🌳', '🌴', '🎋'];
+            
+            for (let i = 0; i < treeCount; i++) {
+                const offsetX = (Math.random() - 0.5) * 120;  // 水平偏移 -60 到 60px
+                const offsetY = (Math.random() - 0.5) * 120;  // 垂直偏移 -60 到 60px
+                const randomTree = treeIcons[Math.floor(Math.random() * treeIcons.length)];
+                
+                const tree = document.createElement('div');
+                tree.style.cssText = `
+                    position: fixed;
+                    left: ${x + offsetX}px;
+                    top: ${y + offsetY}px;
+                    font-size: ${20 + Math.random() * 15}px;
+                    animation: grow ${0.5 + Math.random() * 0.5}s ease-out forwards;
+                    transform: scale(0);
+                    pointer-events: none;
+                    z-index: 9999;
+                `;
+                tree.innerHTML = randomTree;
+                document.body.appendChild(tree);
+                
+                // 3 秒后移除
+                setTimeout(() => {
+                    if (tree.parentNode) {
+                        tree.parentNode.removeChild(tree);
+                    }
+                }, 3000);
+            }
+            
+            console.log('创建 DOM 森林特效，位置：', x, y);
+        }
+
+        // 创建飞雪特效（保留地图版本，用于删除成功提示）
+        function createSnowEffect(latlng) {
+            const snowflakeCount = 20;
+            const snowflakes = [];
+            
+            for (let i = 0; i < snowflakeCount; i++) {
+                // 使用更小的偏移量，让雪花更集中在点击位置
+                const offsetLat = latlng.lat + (Math.random() - 0.5) * 0.005;
+                const offsetLng = latlng.lng + (Math.random() - 0.5) * 0.005;
+                
+                const snowflake = L.marker([offsetLat, offsetLng], {
+                    icon: L.divIcon({
+                        className: 'snowflake',
+                        html: `<div style="font-size: ${10 + Math.random() * 10}px; color: white; text-shadow: 0 0 3px #667eea; animation: fall ${1 + Math.random() * 2}s linear forwards;">❄️</div>`,
+                        iconSize: [20, 20]
+                    })
+                }).addTo(map);
+                
+                snowflakes.push(snowflake);
+                
+                // 2 秒后移除雪花
+                setTimeout(() => {
+                    map.removeLayer(snowflake);
+                }, 3000);
+            }
+        }
+
+        // 创建森林特效
+        function createForestEffect(latlng) {
+            const treeCount = 15;
+            const trees = [];
+            
+            for (let i = 0; i < treeCount; i++) {
+                // 使用更小的偏移量，让树木更集中在点击位置
+                const offsetLat = latlng.lat + (Math.random() - 0.5) * 0.008;
+                const offsetLng = latlng.lng + (Math.random() - 0.5) * 0.008;
+                
+                const treeIcons = ['🌲', '🌳', '🌴', '🎋'];
+                const randomTree = treeIcons[Math.floor(Math.random() * treeIcons.length)];
+                
+                const tree = L.marker([offsetLat, offsetLng], {
+                    icon: L.divIcon({
+                        className: 'tree',
+                        html: `<div style="font-size: ${20 + Math.random() * 15}px; animation: grow ${0.5 + Math.random() * 0.5}s ease-out forwards; transform: scale(0);">${randomTree}</div>`,
+                        iconSize: [30, 30]
+                    })
+                }).addTo(map);
+                
+                trees.push(tree);
+                
+                // 3 秒后移除树木
+                setTimeout(() => {
+                    map.removeLayer(tree);
+                }, 3000);
+            }
+        }
+
+        function openTextModal() {
+            if (currentMode !== 'edit') return;
+            
+            // 先退出删除模式（如果存在）
+            if (deleteMode) {
+                exitDeleteMode();
+            }
+            
+            resetToolState();
+            
+            // 直接进入文本添加模式
+            const clickHandler = function(e) {
+                const content = prompt('请输入文本内容:');
+                if (content && content.trim() !== '') {
+                    addTextMarker(e.latlng, content.trim());
+                    map.off('click', clickHandler);
+                }
+            };
+            
+            map.on('click', clickHandler);
+        }
+
+        function openPhotoModal() {
+            if (currentMode !== 'edit') return;
+            document.getElementById('photo-modal').style.display = 'block';
+        }
+
+        function openLocationSearchModal() {
+            if (currentMode !== 'edit') return;
+            document.getElementById('location-search-modal').style.display = 'block';
+            document.getElementById('location-name').value = '';
+            document.getElementById('location-marker-name').value = '';
+            document.getElementById('search-results').innerHTML = '';
+        }
+
+        function searchLocation() {
+            const locationName = document.getElementById('location-name').value.trim();
+            const markerName = document.getElementById('location-marker-name').value.trim();
+            
+            if (!locationName) {
+                alert('请输入地点名称');
+                return;
+            }
+
+            const searchResults = document.getElementById('search-results');
+            searchResults.innerHTML = '<p style="color: #667eea; text-align: center;">正在搜索...</p>';
+
+            // 使用高德地图地理编码 API
+            const apiKey = ''; // 如果有 API key 可以填写
+            const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(locationName)}&output=json&key=${apiKey}`;
+            
+            // 由于跨域问题，我们使用简化的方法：直接在新疆范围内搜索常见地点
+            // 这里使用一个简化的坐标映射（实际项目中应该使用完整的地理编码服务）
+            const xinjiangLocations = {
+                '喀纳斯湖': [48.6319, 87.0378],
+                '喀纳斯': [48.6319, 87.0378],
+                '天山天池': [43.8869, 88.1231],
+                '天池': [43.8869, 88.1231],
+                '禾木': [48.5667, 87.4167],
+                '禾木村': [48.5667, 87.4167],
+                '可可托海': [46.9833, 89.5167],
+                '那拉提': [43.3167, 84.0167],
+                '那拉提草原': [43.3167, 84.0167],
+                '赛里木湖': [44.5833, 81.1667],
+                '独山子': [44.3167, 84.9000],
+                '独山子大峡谷': [44.3167, 84.9000],
+                '火焰山': [42.9167, 89.5167],
+                '葡萄沟': [42.9500, 89.2167],
+                '吐鲁番': [42.9500, 89.2167],
+                '乌鲁木齐': [43.8167, 87.6167],
+                '喀什': [39.4667, 75.9833],
+                '伊犁': [43.9167, 81.3167],
+                '阿勒泰': [47.8500, 88.1333],
+                '塔城': [46.7500, 82.9833],
+                '克拉玛依': [45.5833, 84.9000],
+                '五彩滩': [47.7833, 86.8000],
+                '魔鬼城': [46.1167, 85.7833],
+                '巴音布鲁克': [42.9833, 84.1500],
+                '库车': [41.7167, 82.9667],
+                '库尔勒': [41.7667, 86.1500]
+            };
+
+            setTimeout(() => {
+                let found = false;
+                let coordinates = null;
+                
+                // 搜索匹配的地点
+                for (const [name, coords] of Object.entries(xinjiangLocations)) {
+                    if (locationName.toLowerCase().includes(name.toLowerCase()) || 
+                        name.toLowerCase().includes(locationName.toLowerCase())) {
+                        found = true;
+                        coordinates = coords;
+                        
+                        // 添加标记 - 使用地点图标
+                        const displayName = markerName || name;
+                        const randomColor = getRandomColor();
+                        const marker = L.marker([coords[0], coords[1]], {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `
+                                    <div style="text-align: center;">
+                                        <div style="background-color: ${randomColor}; width: 30px; height: 40px; border-radius: 50% 50% 50% 0; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); margin: 0 auto; position: relative;">
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
+                                        </div>
+                                        <div style="background: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.2);">${displayName}</div>
+                                    </div>
+                                `,
+                                iconSize: [80, 50],
+                                iconAnchor: [40, 25]
+                            })
+                        }).addTo(map);
+                        
+                        // 保存标记信息包括颜色
+                        marker.markerData = {
+                            name: displayName,
+                            color: randomColor,
+                            latlng: L.latLng(coords[0], coords[1]),
+                            description: name
+                        };
+                        
+                        marker.bindPopup(`<b>${displayName}</b><br>${name}`);
+                        markers.push(marker);
+                        saveMapData();
+                        
+                        // 地图飞向该位置
+                        map.flyTo([coords[0], coords[1]], 10, {
+                            duration: 1.5
+                        });
+                        
+                        break;
+                    }
+                }
+                
+                if (found) {
+                    searchResults.innerHTML = `<p style="color: #2ecc71; text-align: center;">✓ 已找到并标记 "${markerName || locationName}"</p>`;
+                    setTimeout(() => {
+                        closeModal('location-search-modal');
+                        document.getElementById('location-name').value = '';
+                        document.getElementById('location-marker-name').value = '';
+                        searchResults.innerHTML = '';
+                    }, 1500);
+                } else {
+                    searchResults.innerHTML = `<p style="color: #e74c3c; text-align: center;">未找到该地点，请尝试使用"手动标记"功能</p>`;
+                }
+            }, 500);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function confirmPhoto() {
+            const caption = document.getElementById('photo-caption').value;
+            const url = document.getElementById('photo-url').value;
+
+            if (url) {
+                const clickHandler = function(e) {
+                    addPhotoMarker(e.latlng, caption, url);
+                    closeModal('photo-modal');
+                    document.getElementById('photo-caption').value = '';
+                    document.getElementById('photo-url').value = '';
+                    map.off('click', clickHandler);
+                };
+                map.on('click', clickHandler);
+                alert('请在地图上点击想要添加图片的位置');
+            }
+        }
+
+        function confirmRoute() {
+            routeStartDate = document.getElementById('route-date').value;
+            
+            if (!routeStartDate) {
+                alert('请选择日期');
+                return;
+            }
+            
+            // 根据日期自动获取颜色
+            routeColor = getDateColor(routeStartDate);
+            const dayNum = getDayNumber(routeStartDate);
+            
+            // 检查是否选择了两个地点
+            if (selectedLocations.length !== 2) {
+                alert('请选择两个地点');
+                return;
+            }
+            
+            // 关闭模态框
+            closeModal('route-modal');
+            
+            // 显示加载提示
+            const loadingTip = L.control({position: 'topright'});
+            loadingTip.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                div.style.cssText = 'background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: #667eea;';
+                div.innerHTML = '⏳ 正在规划路线...';
+                return div;
+            };
+            loadingTip.addTo(map);
+            
+            // 使用 Leaflet Routing Machine 进行路径规划
+            const startPoint = selectedLocations[0].latlng;
+            const endPoint = selectedLocations[1].latlng;
+            
+            let routeCalculated = false;  // 标记是否已计算路线
+            
+            // 创建路径规划控制器（不立即添加到地图）
+            // 使用 OSRM 的公共服务器
+            const routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(startPoint.lat, startPoint.lng),
+                    L.latLng(endPoint.lat, endPoint.lng)
+                ],
+                routeWhileDragging: false,
+                show: false,  // 不显示导航面板
+                addWaypoints: false,  // 不允许添加途经点
+                draggableWaypoints: false,  // 不允许拖拽途经点
+                fitSelectedRoutes: false,  // 不自动缩放
+                createMarker: function() { return null; },  // 不创建默认标记
+                lineOptions: {
+                    styles: [
+                        {
+                            color: routeColor,
+                            opacity: 0.8,
+                            weight: 5,
+                            dashArray: '10, 10'
+                        }
+                    ]
+                },
+                // 使用 OSRM 公共服务器
+                serviceUrl: 'https://router.project-osrm.org/',
+                profile: 'driving',  // 使用驾车模式
+                timeout: 10000  // 10 秒超时
+            });
+            
+            // 监听路线找到事件
+            routingControl.on('routesfound', function(e) {
+                if (routeCalculated) return;
+                routeCalculated = true;
+                
+                map.removeControl(loadingTip);
+                
+                const routes = e.routes;
+                const summary = e.routes[0].summary;
+                
+                console.log('路径规划成功:', summary);
+                console.log('路线坐标数:', routes[0].coordinates.length);
+                
+                if (routes && routes.length > 0) {
+                    const route = routes[0];
+                    const coordinates = route.coordinates;
+                    
+                    const polyline = L.polyline(coordinates.map(coord => [coord.lat, coord.lng]), {
+                        color: routeColor,
+                        weight: 5,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+                    
+                    const startMarker = L.marker(startPoint, {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    const endMarker = L.marker(endPoint, {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    routePolylines.push({
+                        polyline: polyline,
+                        routingControl: routingControl,
+                        start: startPoint,
+                        end: endPoint,
+                        color: routeColor,
+                        date: routeStartDate,
+                        marker: endMarker,
+                        startMarker: startMarker,
+                        startName: selectedLocations[0].name,
+                        endName: selectedLocations[1].name,
+                        coordinates: coordinates.map(coord => [coord.lat, coord.lng]),
+                        distance: summary.totalDistance,
+                        time: summary.totalTime
+                    });
+                    
+                    saveRouteData();
+                    
+                    const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+                    const timeMinutes = (summary.totalTime / 60).toFixed(0);
+                    
+                    selectedLocations = [];
+                    routeStartDate = null;
+                    routeColor = null;
+                    
+                    resetToolState();
+                    
+                    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+                    
+                    // 显示成功提示
+                    const successTip = L.control({position: 'topright'});
+                    successTip.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                        div.style.cssText = 'background: #2ecc71; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                        div.innerHTML = `✅ 路线规划成功！<br>📍 ${selectedLocations[0].name} → ${selectedLocations[1].name}<br>📏 距离：约${distanceKm}公里<br>⏱️ 预计：${timeMinutes}分钟`;
+                        return div;
+                    };
+                    successTip.addTo(map);
+                    
+                    setTimeout(() => {
+                        map.removeControl(successTip);
+                    }, 3000);
+                }
+            });
+            
+            // 监听错误
+            routingControl.on('routingerror', function(e) {
+                if (routeCalculated) return;
+                routeCalculated = true;
+                
+                map.removeControl(loadingTip);
+                
+                console.error('路径规划失败:', e);
+                console.error('错误详情:', e.error || e);
+                
+                // 回退到直线连接
+                const failTip = L.control({position: 'topright'});
+                failTip.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                    div.style.cssText = 'background: #f39c12; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                    div.innerHTML = '⚠️ 路线服务不可用，使用直线连接';
+                    return div;
+                };
+                failTip.addTo(map);
+                
+                setTimeout(() => {
+                    map.removeControl(failTip);
+                    confirmRouteWithLine();
+                }, 1500);
+            });
+            
+            // 手动添加到地图以触发路径计算
+            routingControl.addTo(map);
+        }
+        
+        function confirmRouteWithLine() {
+            // 回退到直线连接的简化版本
+            const routeStartDate = document.getElementById('route-date').value;
+            const routeColor = getDateColor(routeStartDate);
+            const dayNum = getDayNumber(routeStartDate);
+            
+            if (selectedLocations.length !== 2) return;
+            
+            const startPoint = selectedLocations[0].latlng;
+            const endPoint = selectedLocations[1].latlng;
+            
+            const polyline = L.polyline([startPoint, endPoint], {
+                color: routeColor,
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 10'
+            }).addTo(map);
+            
+            const startMarker = L.marker(startPoint, {
+                icon: L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map);
+            
+            const endMarker = L.marker(endPoint, {
+                icon: L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map);
+            
+            // 计算直线距离（用于显示）
+            const distanceKm = startPoint.distanceTo(endPoint) / 1000;
+            
+            routePolylines.push({
+                polyline: polyline,
+                start: startPoint,
+                end: endPoint,
+                color: routeColor,
+                date: routeStartDate,
+                marker: endMarker,
+                startMarker: startMarker,
+                startName: selectedLocations[0].name,
+                endName: selectedLocations[1].name
+            });
+            
+            saveRouteData();
+            selectedLocations = [];
+            routeStartDate = null;
+            routeColor = null;
+            resetToolState();
+            map.flyTo(L.latLng((startPoint.lat + endPoint.lat) / 2, (startPoint.lng + endPoint.lng) / 2), 8, { duration: 1.5 });
+            alert(`路线已绘制完成！\n${selectedLocations[0].name} → ${selectedLocations[1].name}\n日期：${routeStartDate}（第${dayNum}天）\n距离：约${distanceKm.toFixed(1)}公里`);
+        }
+
+        function saveRouteData() {
+            // 更新 appData 中的 routes 数据
+            appData.routes = routePolylines.map(route => ({
+                start: [route.start.lat, route.start.lng],
+                end: [route.end.lat, route.end.lng],
+                color: route.color,
+                date: route.date,
+                coordinates: route.coordinates || null,  // 保存实际路径坐标
+                distance: route.distance || 0,
+                time: route.time || 0
+            }));
+            
+            // 更新数据并保存
+            updateAppData({ routes: appData.routes });
+        }
+
+        function loadRouteData(routes) {
+            if (!routes || routes.length === 0) return;
+            
+            routes.forEach(routeData => {
+                // 如果有保存的坐标数据，使用实际路径；否则使用直线
+                if (routeData.coordinates && routeData.coordinates.length > 0) {
+                    const polyline = L.polyline(routeData.coordinates, {
+                        color: routeData.color || '#e74c3c',
+                        weight: 5,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+                    
+                    // 添加起点标记
+                    const startMarker = L.marker(routeData.start, {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${routeData.color || '#e74c3c'}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    // 添加终点标记
+                    const endMarker = L.marker(routeData.end, {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${routeData.color || '#e74c3c'}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    routePolylines.push({
+                        polyline: polyline,
+                        start: L.latLng(routeData.start),
+                        end: L.latLng(routeData.end),
+                        color: routeData.color,
+                        date: routeData.date,
+                        marker: endMarker,
+                        startMarker: startMarker,
+                        coordinates: routeData.coordinates,
+                        distance: routeData.distance,
+                        time: routeData.time
+                    });
+                } else {
+                    // 使用直线连接
+                    const polyline = L.polyline([routeData.start, routeData.end], {
+                        color: routeData.color || '#e74c3c',
+                        weight: 5,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+                    
+                    const startMarker = L.marker(routeData.start, {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${routeData.color || '#e74c3c'}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    const endMarker = L.marker(routeData.end, {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${routeData.color || '#e74c3c'}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    routePolylines.push({
+                        polyline: polyline,
+                        start: L.latLng(routeData.start),
+                        end: L.latLng(routeData.end),
+                        color: routeData.color,
+                        date: routeData.date,
+                        marker: endMarker,
+                        startMarker: startMarker
+                    });
+                }
+            });
+        }
+
+        // 随机颜色数组
+        const markerColors = [
+            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', 
+            '#9b59b6', '#1abc9c', '#e67e22', '#16a085'
+        ];
+
+        function getRandomColor() {
+            return markerColors[Math.floor(Math.random() * markerColors.length)];
+        }
+
+        function addMarker(latlng, name, description) {
+            const randomColor = getRandomColor();
+            
+            const marker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `
+                        <div style="text-align: center;">
+                            <div style="background-color: ${randomColor}; width: 30px; height: 40px; border-radius: 50% 50% 50% 0; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); margin: 0 auto; position: relative;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
+                            </div>
+                            <div style="background: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.2);">${name}</div>
+                        </div>
+                    `,
+                    iconSize: [80, 50],
+                    iconAnchor: [40, 25]
+                })
+            }).addTo(map);
+            
+            // 保存标记信息包括颜色
+            marker.markerData = {
+                name: name,
+                color: randomColor,
+                latlng: latlng,
+                description: description
+            };
+            
+            const popupContent = `
+                <div class="popup-content">
+                    <h3>${name}</h3>
+                    <p>${description || ''}</p>
+                    ${currentMode === 'edit' ? `<button class="popup-delete-btn" onclick="deleteMarker(${markers.length})">删除标记</button>` : ''}
+                </div>
+            `;
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+            saveMapData();
+        }
+
+        // 打开文本标注模态框
+        function openTextModal() {
+            if (currentMode !== 'edit') {
+                alert('请先切换到修改模式');
+                return;
+            }
+            document.getElementById('text-content').value = '';
+            document.getElementById('text-modal').style.display = 'block';
+        }
+
+        // 确认添加文本标注
+        function confirmTextMarker() {
+            const content = document.getElementById('text-content').value.trim();
+            
+            if (!content) {
+                alert('请输入文本内容');
+                return;
+            }
+            
+            // 关闭模态框
+            closeModal('text-modal');
+            
+            // 提示用户点击地图选择位置
+            const tipControl = L.control({position: 'topright'});
+            tipControl.onAdd = function() {
+                const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                div.style.cssText = 'background: #667eea; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white; cursor: pointer;';
+                div.innerHTML = '📍 请点击地图选择文本位置（按 ESC 取消）';
+                return div;
+            };
+            tipControl.addTo(map);
+            
+            // 临时点击事件监听器
+            let clickHandler = null;
+            let escHandler = null;
+            
+            // 创建一次性点击事件
+            clickHandler = function(e) {
+                // 添加文本标记到点击位置
+                addTextMarker(e.latlng, content);
+                
+                // 移除事件监听器
+                map.off('click', clickHandler);
+                if (escHandler) {
+                    document.removeEventListener('keydown', escHandler);
+                }
+                
+                // 移除提示
+                map.removeControl(tipControl);
+                
+                // 显示成功提示
+                const successTip = L.control({position: 'topright'});
+                successTip.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                    div.style.cssText = 'background: #2ecc71; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                    div.innerHTML = '✅ 文本已添加';
+                    return div;
+                };
+                successTip.addTo(map);
+                
+                setTimeout(() => {
+                    map.removeControl(successTip);
+                }, 2000);
+            };
+            
+            // ESC 取消处理
+            escHandler = function(e) {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+                    map.off('click', clickHandler);
+                    document.removeEventListener('keydown', escHandler);
+                    map.removeControl(tipControl);
+                    
+                    // 显示取消提示
+                    const cancelTip = L.control({position: 'topright'});
+                    cancelTip.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                        div.style.cssText = 'background: #95a5a6; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                        div.innerHTML = '❌ 已取消添加文本';
+                        return div;
+                    };
+                    cancelTip.addTo(map);
+                    
+                    setTimeout(() => {
+                        map.removeControl(cancelTip);
+                    }, 2000);
+                }
+            };
+            
+            // 添加事件监听器
+            map.on('click', clickHandler);
+            document.addEventListener('keydown', escHandler);
+        }
+
+        // 打开图片模态框
+        function openPhotoModal() {
+            if (currentMode !== 'edit') {
+                alert('请先切换到修改模式');
+                return;
+            }
+            document.getElementById('photo-caption').value = '';
+            document.getElementById('photo-url').value = '';
+            document.getElementById('photo-modal').style.display = 'block';
+        }
+
+        function addTextMarker(latlng, content) {
+            // 根据内容长度估算宽度（每个汉字约 14px，英文约 8px）
+            const textLength = content.length;
+            const chineseChars = (content.match(/[\u4e00-\u9fa5]/g) || []).length;
+            const estimatedWidth = Math.min(300, Math.max(100, chineseChars * 14 + (textLength - chineseChars) * 8 + 24));
+            
+            // 估算文本框高度（单行约 30px，多行按比例增加）
+            const estimatedHeight = Math.max(30, Math.min(80, Math.ceil(chineseChars / 20) * 20 + 16));
+            
+            const marker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'custom-text-marker',
+                    html: `<div class="text-marker-content" style="background: white; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: ${estimatedWidth}px; max-width: ${estimatedWidth}px; font-size: 14px; cursor: pointer; white-space: pre-wrap; word-break: break-word; text-align: center; display: flex; align-items: center; justify-content: center;">${content}</div>`,
+                    iconSize: [estimatedWidth, estimatedHeight],
+                    iconAnchor: [estimatedWidth / 2, estimatedHeight / 2]
+                })
+            }).addTo(map);
+
+            // 保存文本内容
+            marker.markerData = {
+                type: 'text',
+                content: content,
+                latlng: latlng,
+                width: estimatedWidth
+            };
+
+            // 显示模式下点击可编辑
+            marker.on('click', function() {
+                if (currentMode === 'view') {
+                    const newContent = prompt('修改文本内容:', content);
+                    if (newContent !== null && newContent.trim() !== '') {
+                        // 重新计算宽度和高度
+                        const newTextLength = newContent.length;
+                        const newChineseChars = (newContent.match(/[\u4e00-\u9fa5]/g) || []).length;
+                        const newEstimatedWidth = Math.min(300, Math.max(100, newChineseChars * 14 + (newTextLength - newChineseChars) * 8 + 24));
+                        const newEstimatedHeight = Math.max(30, Math.min(80, Math.ceil(newChineseChars / 20) * 20 + 16));
+                        
+                        marker.setIcon(L.divIcon({
+                            className: 'custom-text-marker',
+                            html: `<div class="text-marker-content" style="background: white; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: ${newEstimatedWidth}px; max-width: ${newEstimatedWidth}px; font-size: 14px; cursor: pointer; white-space: pre-wrap; word-break: break-word; text-align: center; display: flex; align-items: center; justify-content: center;">${newContent}</div>`,
+                            iconSize: [newEstimatedWidth, newEstimatedHeight],
+                            iconAnchor: [newEstimatedWidth / 2, newEstimatedHeight / 2]
+                        }));
+                        marker.markerData.content = newContent;
+                        marker.markerData.width = newEstimatedWidth;
+                        saveMapData();
+                    }
+                }
+            });
+
+            if (currentMode === 'edit') {
+                const popupContent = `
+                    <div class="popup-content">
+                        <button class="popup-delete-btn" onclick="deleteMarker(${markers.length})">删除标注</button>
+                    </div>
+                `;
+                marker.bindPopup(popupContent);
+            }
+
+            markers.push(marker);
+            saveMapData();
+        }
+
+        function addPhotoMarker(latlng, caption, url) {
+            const marker = L.marker(latlng).addTo(map);
+            
+            const popupContent = `
+                <div class="popup-content">
+                    ${caption ? `<h3>${caption}</h3>` : ''}
+                    <img src="${url}" alt="旅行照片" onerror="this.src='';this.alt='图片加载失败'">
+                    ${currentMode === 'edit' ? `<button class="popup-delete-btn" onclick="deleteMarker(${markers.length})">删除图片</button>` : ''}
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+            saveMapData();
+        }
+
+        function deleteMarker(index) {
+            if (markers[index]) {
+                map.removeLayer(markers[index]);
+                markers.splice(index, 1);
+                saveMapData();
+            }
+        }
+
+        function saveMapData() {
+            // 更新 appData 中的 map 数据
+            appData.map = markers.map(marker => {
+                const latlng = marker.getLatLng();
+                const markerData = marker.markerData || {};
+                return {
+                    latlng: [latlng.lat, latlng.lng],
+                    name: markerData.name || '',
+                    color: markerData.color || '#e74c3c',
+                    description: markerData.description || '',
+                    type: markerData.type || 'marker',
+                    content: markerData.content || '',
+                    width: markerData.width || 200
+                };
+            });
+            
+            // 更新数据并保存
+            updateAppData({ map: appData.map });
+        }
+
+        function saveData() {
+            // 导出备份文件
+            const success = exportDataToFile();
+            if (success) {
+                updateStorageStatus('✓ 备份文件已导出');
+            } else {
+                updateStorageStatus('导出失败，请检查浏览器设置');
+            }
+        }
+
+        function loadData() {
+            // 从文件导入数据
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        // 更新 appData
+                        appData = data;
+                        // 保存到 localStorage
+                        saveToLocalStorage();
+                        // 重新加载数据到界面
+                        initSchedule();
+                        loadMapMarkers(appData.map || []);
+                        loadRouteData(appData.routes || []);
+                        updateStorageStatus('✓ 数据已成功导入');
+                    } catch (err) {
+                        updateStorageStatus('数据加载失败：文件格式错误');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            fileInput.click();
+        }
+
+        function loadMapMarkers(mapData) {
+            if (!map || !mapData) return;
+            
+            setTimeout(() => {
+                mapData.forEach(item => {
+                    try {
+                        // 检查是否是文本标记
+                        if (item.type === 'text') {
+                            const content = item.content || '';
+                            const width = item.width || 200;
+                            const chineseChars = (content.match(/[\u4e00-\u9fa5]/g) || []).length;
+                            const height = Math.max(30, Math.min(80, Math.ceil(chineseChars / 20) * 20 + 16));
+                            
+                            const marker = L.marker([item.latlng[0], item.latlng[1]], {
+                                icon: L.divIcon({
+                                    className: 'custom-text-marker',
+                                    html: `<div class="text-marker-content" style="background: white; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: ${width}px; max-width: ${width}px; font-size: 14px; cursor: pointer; white-space: pre-wrap; word-break: break-word; text-align: center; display: flex; align-items: center; justify-content: center;">${content}</div>`,
+                                    iconSize: [width, height],
+                                    iconAnchor: [width / 2, height / 2]
+                                })
+                            }).addTo(map);
+                            
+                            marker.markerData = {
+                                type: 'text',
+                                content: content,
+                                latlng: L.latLng(item.latlng[0], item.latlng[1]),
+                                width: width
+                            };
+                            
+                            // 显示模式下点击可编辑
+                            marker.on('click', function() {
+                                if (currentMode === 'view') {
+                                    const newContent = prompt('修改文本内容:', content);
+                                    if (newContent !== null && newContent.trim() !== '') {
+                                        const newTextLength = newContent.length;
+                                        const newChineseChars = (newContent.match(/[\u4e00-\u9fa5]/g) || []).length;
+                                        const newEstimatedWidth = Math.min(300, Math.max(100, newChineseChars * 14 + (newTextLength - newChineseChars) * 8 + 24));
+                                        const newEstimatedHeight = Math.max(30, Math.min(80, Math.ceil(newChineseChars / 20) * 20 + 16));
+                                        
+                                        marker.setIcon(L.divIcon({
+                                            className: 'custom-text-marker',
+                                            html: `<div class="text-marker-content" style="background: white; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: ${newEstimatedWidth}px; max-width: ${newEstimatedWidth}px; font-size: 14px; cursor: pointer; white-space: pre-wrap; word-break: break-word; text-align: center; display: flex; align-items: center; justify-content: center;">${newContent}</div>`,
+                                            iconSize: [newEstimatedWidth, newEstimatedHeight],
+                                            iconAnchor: [newEstimatedWidth / 2, newEstimatedHeight / 2]
+                                        }));
+                                        marker.markerData.content = newContent;
+                                        marker.markerData.width = newEstimatedWidth;
+                                        saveMapData();
+                                    }
+                                }
+                            });
+                            
+                            if (currentMode === 'edit') {
+                                const popupContent = `
+                                    <div class="popup-content">
+                                        <button class="popup-delete-btn" onclick="deleteMarker(${markers.length})">删除标注</button>
+                                    </div>
+                                `;
+                                marker.bindPopup(popupContent);
+                            }
+                            
+                            markers.push(marker);
+                        } else {
+                            // 地点标记
+                            const color = item.color || '#e74c3c';
+                            const name = item.name || '标记点';
+                            const description = item.description || '';
+                            
+                            const marker = L.marker([item.latlng[0], item.latlng[1]], {
+                                icon: L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: `
+                                        <div style="text-align: center;">
+                                            <div style="background-color: ${color}; width: 30px; height: 40px; border-radius: 50% 50% 50% 0; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); margin: 0 auto; position: relative;">
+                                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
+                                            </div>
+                                            <div style="background: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.2);">${name}</div>
+                                        </div>
+                                    `,
+                                    iconSize: [80, 50],
+                                    iconAnchor: [40, 25]
+                                })
+                            }).addTo(map);
+                            
+                            // 保存标记信息包括颜色
+                            marker.markerData = {
+                                name: name,
+                                color: color,
+                                latlng: L.latLng(item.latlng[0], item.latlng[1]),
+                                description: description
+                            };
+                            
+                            const popupContent = `
+                                <div class="popup-content">
+                                    <h3>${name}</h3>
+                                    <p>${description || ''}</p>
+                                    ${currentMode === 'edit' ? `<button class="popup-delete-btn" onclick="deleteMarker(${markers.length})">删除标记</button>` : ''}
+                                </div>
+                            `;
+                            marker.bindPopup(popupContent);
+                            markers.push(marker);
+                        }
+                    } catch (e) {
+                        console.error('加载标记失败:', e);
+                    }
+                });
+            }, 300);
+        }
+
+        function clearData() {
+            if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+                // 清空 appData
+                appData = { days: {}, map: [], routes: [] };
+                // 清空 localStorage
+                localStorage.removeItem(STORAGE_KEY);
+                // 清空界面
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                initSchedule();
+                updateStorageStatus('✓ 数据已清空');
+            }
+        }
+
+        function autoSave() {
+            updateStorageStatus('正在保存...');
+            setTimeout(() => {
+                updateStorageStatus('数据已自动保存');
+            }, 500);
+        }
+
+        function updateStorageStatus(message) {
+            document.getElementById('storage-status').textContent = message;
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // ========== 粒子背景效果 ==========
+        function createParticles() {
+            const container = document.getElementById('particles-container');
+            if (!container) return;
+            
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // 随机大小
+                const size = Math.random() * 20 + 5;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // 随机位置
+                particle.style.left = `${Math.random() * 100}%`;
+                
+                // 随机动画延迟和持续时间
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                particle.style.animationDuration = `${Math.random() * 10 + 10}s`;
+                
+                // 随机透明度
+                particle.style.opacity = Math.random() * 0.5 + 0.3;
+                
+                container.appendChild(particle);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 创建粒子效果
+            createParticles();
+            
+            initSchedule();
+            initMap();
+            switchMode('view');
+            
+            // 优先从 localStorage 加载数据（更快、更可靠）
+            const localData = loadFromLocalStorage();
+            if (localData) {
+                appData = localData;
+                console.log('从 localStorage 恢复数据');
+            } else {
+                // 如果 localStorage 没有数据，尝试从文件加载
+                await loadDataFromFile();
+            }
+            
+            // 加载地图标记和路线
+            setTimeout(() => {
+                loadMapMarkers(appData.map || []);
+                loadRouteData(appData.routes || []);
+                updateStorageStatus('✓ 数据已加载');
+            }, 300);
+        });
+    </script>
+</body>
+</html>
