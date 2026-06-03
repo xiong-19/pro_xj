@@ -5,13 +5,25 @@
       "start": null,
       "destination": null,
       "scenic": [],
+      "food": [
+        "大盘鸡",
+        "羊肉串"
+      ],
+      "distance": "",
+      "other": ""
+    },
+    "2026-06-12": {
+      "route": [],
+      "start": null,
+      "destination": null,
+      "scenic": [],
       "food": [],
-      "distance": "11000",
+      "distance": "100km，5小时",
       "other": ""
     }
   },
   "map": [],
   "routes": [],
-  "timestamp": "1780457081031",
-  "lastModified": "2026-06-03T03:24:41.031Z"
+  "timestamp": "1780458985835",
+  "lastModified": "2026-06-03T03:56:25.835Z"
 }
