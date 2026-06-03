@@ -1158,6 +1158,7 @@
                 </div>
                 <div class="storage-actions">
                     <button class="storage-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;" onclick="syncToGitHub()" title="同步到 GitHub">☁️ 同步</button>
+                    <button class="storage-btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;" onclick="openTokenModal()" title="配置 GitHub Token">⚙️ Token</button>
                     <button class="storage-btn clear" onclick="clearData()" title="清空所有数据">🗑️ 清空</button>
                 </div>
             </div>
@@ -1408,6 +1409,55 @@
         </div>
     </div>
 
+    <!-- Token 配置弹窗 -->
+    <div class="modal" id="token-modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>⚙️ 配置 GitHub Token</h2>
+                <span class="close-btn" onclick="closeModal('token-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
+                        🔑 GitHub Personal Access Token
+                    </label>
+                    <input type="password" id="github-token-input" 
+                           placeholder="请输入 gh_ 开头的 Token"
+                           style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-family: monospace;">
+                </div>
+                
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #856404;">📖 如何获取 Token？</h4>
+                    <ol style="margin: 0; padding-left: 20px; color: #856404; line-height: 1.8;">
+                        <li>访问 <a href="https://github.com/settings/tokens" target="_blank" style="color: #667eea;">GitHub Token 设置页面</a></li>
+                        <li>点击 "Generate new token (classic)"</li>
+                        <li>Note：填写任意内容（如：Xinjiang Travel）</li>
+                        <li>Expiration：建议 30 天</li>
+                        <li><strong>勾选 repo 权限（必须）</strong></li>
+                        <li>点击 "Generate token"</li>
+                        <li><strong>立即复制 Token（只显示一次）</strong></li>
+                    </ol>
+                </div>
+
+                <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #0c5460;">💡 使用说明</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #0c5460; line-height: 1.8;">
+                        <li>Token 会保存在本地浏览器，不会上传到 GitHub</li>
+                        <li>每次同步数据时会使用此 Token</li>
+                        <li>可以随时更换 Token</li>
+                        <li>如果 Token 失效，重新生成后在此更新</li>
+                    </ul>
+                </div>
+
+                <div id="token-status" style="margin-bottom: 15px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeModal('token-modal')">取消</button>
+                <button class="modal-btn save" onclick="saveToken()">💾 保存 Token</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentMode = 'view';
         let map;
@@ -1461,12 +1511,13 @@
         const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
         const GITHUB_RAW_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FILE_PATH}`;
         
-        // GitHub Token（固定值，无需配置）
-        const GITHUB_TOKEN = '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';  // 替换为你的固定 Token
+        // GitHub Token（从 localStorage 加载，首次使用需要配置）
+        let GITHUB_TOKEN = localStorage.getItem('github_token') || '';
         
         const DATA_FILE_PATH = 'xinjiang_travel_data.json';
         const STORAGE_KEY = 'xinjiang_travel_data';
         const BACKUP_KEY = 'xinjiang_travel_backup_timestamp';
+        const TOKEN_KEY = 'github_token_configured';  // Token 配置标记
         let appData = { days: {}, map: [], routes: [] };  // 内存中的数据缓存
 
         // 从 localStorage 加载数据（优先）
@@ -3470,6 +3521,11 @@
 
         // 同步数据到 GitHub（完全自动化）
         async function syncToGitHub() {
+            // 检查 Token 是否配置
+            if (!checkTokenConfigured()) {
+                return;
+            }
+            
             updateStorageStatus('🔄 正在同步到 GitHub...');
             
             try {
@@ -3700,6 +3756,67 @@
             }
         }
 
+        // Token 配置相关函数
+        function openTokenModal() {
+            // 加载已保存的 Token（显示部分）
+            const savedToken = localStorage.getItem('github_token') || '';
+            const tokenInput = document.getElementById('github-token-input');
+            
+            if (savedToken) {
+                // 如果已有 Token，显示前 8 位和后 4 位
+                const masked = savedToken.substring(0, 8) + '••••••••••••••••' + savedToken.substring(savedToken.length - 4);
+                tokenInput.value = savedToken;  // 显示完整 Token（方便修改）
+                document.getElementById('token-status').innerHTML = 
+                    '<div style="background: #d4edda; padding: 10px; border-radius: 6px; color: #155724;">✅ Token 已配置</div>';
+            } else {
+                tokenInput.value = '';
+                document.getElementById('token-status').innerHTML = 
+                    '<div style="background: #fff3cd; padding: 10px; border-radius: 6px; color: #856404;">⚠️ 尚未配置 Token</div>';
+            }
+            
+            document.getElementById('token-modal').style.display = 'block';
+        }
+
+        function saveToken() {
+            const tokenInput = document.getElementById('github-token-input');
+            const token = tokenInput.value.trim();
+            const statusDiv = document.getElementById('token-status');
+            
+            // 验证 Token 格式
+            if (!token) {
+                statusDiv.innerHTML = '<div style="background: #f8d7da; padding: 10px; border-radius: 6px; color: #721c24;">❌ Token 不能为空</div>';
+                return;
+            }
+            
+            if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+                statusDiv.innerHTML = '<div style="background: #f8d7da; padding: 10px; border-radius: 6px; color: #721c24;">❌ Token 格式错误，应该以 gh_ 或 github_pat_ 开头</div>';
+                return;
+            }
+            
+            // 保存到 localStorage
+            localStorage.setItem('github_token', token);
+            GITHUB_TOKEN = token;  // 更新全局变量
+            
+            statusDiv.innerHTML = '<div style="background: #d4edda; padding: 10px; border-radius: 6px; color: #155724;">✅ Token 已保存！现在可以点击"☁️ 同步"按钮了</div>';
+            
+            // 3 秒后关闭弹窗
+            setTimeout(() => {
+                closeModal('token-modal');
+                updateStorageStatus('✓ Token 已配置');
+            }, 3000);
+        }
+
+        function checkTokenConfigured() {
+            if (!GITHUB_TOKEN) {
+                const confirmed = confirm('⚠️ 尚未配置 GitHub Token！\n\n需要先配置 Token 才能使用同步功能。\n\n是否立即配置？');
+                if (confirmed) {
+                    openTokenModal();
+                }
+                return false;
+            }
+            return true;
+        }
+
         function autoSave() {
             updateStorageStatus('正在保存...');
             setTimeout(() => {
@@ -3754,6 +3871,16 @@
             initSchedule();
             initMap();
             switchMode('view');
+            
+            // 检查 Token 是否配置
+            const tokenConfigured = localStorage.getItem('github_token');
+            if (!tokenConfigured) {
+                console.log('⚠️ 未配置 GitHub Token，将使用 localStorage 保存数据');
+                updateStorageStatus('⚠️ 请配置 Token 以使用同步功能');
+            } else {
+                console.log('✅ Token 已配置');
+                updateStorageStatus('✓ Token 已配置');
+            }
             
             // 自动同步策略：优先从 GitHub 加载最新数据
             console.log('🔄 开始自动同步数据...');
