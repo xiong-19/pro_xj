@@ -1,5 +1,19 @@
 {
-  "days": {},
+  "days": {
+    "2026-06-09": {
+      "route": [
+        "乌鲁木齐"
+      ],
+      "start": null,
+      "destination": null,
+      "scenic": [],
+      "food": [],
+      "distance": "",
+      "other": ""
+    }
+  },
   "map": [],
-  "routes": []
+  "routes": [],
+  "timestamp": "1780453772592",
+  "lastModified": "2026-06-03T02:29:32.592Z"
 }
