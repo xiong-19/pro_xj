@@ -1,7 +1,17 @@
 {
-  "days": {},
+  "days": {
+    "2026-06-11": {
+      "route": [],
+      "start": null,
+      "destination": null,
+      "scenic": [],
+      "food": [],
+      "distance": "11000",
+      "other": ""
+    }
+  },
   "map": [],
   "routes": [],
-  "timestamp": "1780457064224",
-  "lastModified": "2026-06-03T03:24:24.224Z"
+  "timestamp": "1780457081031",
+  "lastModified": "2026-06-03T03:24:41.031Z"
 }
