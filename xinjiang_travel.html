@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 禁止缓存头部 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>新疆北疆旅行攻略</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1458,7 +1462,7 @@
         const GITHUB_RAW_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FILE_PATH}`;
         
         // GitHub Token（固定值，无需配置）
-        const GITHUB_TOKEN = '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';  // 替换为你的固定 Token
+        const GITHUB_TOKEN = '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';  // ← 请替换为完整的 40 位 Token
         
         const DATA_FILE_PATH = 'xinjiang_travel_data.json';
         const STORAGE_KEY = 'xinjiang_travel_data';
