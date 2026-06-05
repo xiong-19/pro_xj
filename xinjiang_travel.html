@@ -2525,7 +2525,7 @@
                     exitDeleteMode();
                 }
                 
-                // 清除所有标记
+                // 清除所有标记（包括普通标记、文本标注、图片标注）
                 markers.forEach(marker => map.removeLayer(marker));
                 markers = [];
                 
@@ -2548,9 +2548,18 @@
                 
                 // 重置状态
                 selectedLocations = [];
+                routeStartDate = null;
+                routeColor = null;
                 resetToolState();
                 
+                // 重置地图视图到默认状态
+                map.setView([44.0, 85.0], 7);
+                
                 updateStorageStatus('地图已重置');
+                
+                console.log('✅ 地图重置完成');
+                console.log(' 清除的标记数:', markers.length);
+                console.log(' 清除的路线数:', routePolylines.length);
             }
         }
 
