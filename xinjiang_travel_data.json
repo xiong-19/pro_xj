@@ -3,23 +3,11 @@
   "map": [
     {
       "latlng": [
-        44.608256,
-        81.180576
-      ],
-      "name": "赛里木湖",
-      "color": "#e74c3c",
-      "description": "赛里木湖, 博乐市, 博尔塔拉蒙古自治州, 新疆维吾尔自治区, 中国",
-      "type": "marker",
-      "content": "",
-      "width": 200
-    },
-    {
-      "latlng": [
         43.8244074,
         87.6139038
       ],
       "name": "乌鲁木齐市",
-      "color": "#f39c12",
+      "color": "#1abc9c",
       "description": "乌鲁木齐市, 新疆维吾尔自治区, 中国",
       "type": "marker",
       "content": "",
@@ -27,6 +15,6 @@
     }
   ],
   "routes": [],
-  "timestamp": "1780653184962",
-  "lastModified": "2026-06-05T09:53:04.962Z"
+  "timestamp": "1780653237659",
+  "lastModified": "2026-06-05T09:53:57.659Z"
 }
