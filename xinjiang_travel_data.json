@@ -1,5 +1,15 @@
 {
-  "days": {},
+  "days": {
+    "2026-06-10": {
+      "route": [],
+      "start": null,
+      "destination": null,
+      "scenic": [],
+      "food": [],
+      "distance": "1000",
+      "other": ""
+    }
+  },
   "map": [
     {
       "latlng": [
@@ -7,7 +17,7 @@
         87.6139038
       ],
       "name": "乌鲁木齐市",
-      "color": "#1abc9c",
+      "color": "#2ecc71",
       "description": "乌鲁木齐市, 新疆维吾尔自治区, 中国",
       "type": "marker",
       "content": "",
@@ -15,6 +25,6 @@
     }
   ],
   "routes": [],
-  "timestamp": "1780653237659",
-  "lastModified": "2026-06-05T09:53:57.659Z"
+  "timestamp": "1780653389376",
+  "lastModified": "2026-06-05T09:56:29.376Z"
 }
