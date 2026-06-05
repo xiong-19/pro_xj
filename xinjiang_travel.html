@@ -3950,6 +3950,19 @@
                         return appData;
                     } else {
                         console.log('✓ 本地数据已是最新');
+                        
+                        // 🔥 重要检查：如果本地有时间戳但数据为空，强制使用 GitHub 数据
+                        const hasLocalData = (appData.days && Object.keys(appData.days).length > 0) || 
+                                           (appData.map && appData.map.length > 0) || 
+                                           (appData.routes && appData.routes.length > 0);
+                        
+                        if (!hasLocalData && githubData) {
+                            console.log('⚠️ 本地数据为空，强制使用 GitHub 数据');
+                            appData = githubData;
+                            saveToLocalStorage();
+                            console.log('✅ 已使用 GitHub 数据覆盖空本地数据');
+                        }
+                        
                         console.log(' 本地数据:', {
                             daysCount: appData.days ? Object.keys(appData.days).length : 0,
                             mapCount: appData.map ? appData.map.length : 0,
