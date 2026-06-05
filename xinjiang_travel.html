@@ -2479,6 +2479,7 @@
                                 if (route.polyline) map.removeLayer(route.polyline);
                                 if (route.marker) map.removeLayer(route.marker);
                                 if (route.startMarker) map.removeLayer(route.startMarker);
+                                if (route.infoLabel) map.removeLayer(route.infoLabel);  // 删除文字标注
                                 if (route.routingControl) map.removeControl(route.routingControl);
                                 
                                 routePolylines.splice(i, 1);
@@ -2533,6 +2534,7 @@
                     if (route.polyline) map.removeLayer(route.polyline);
                     if (route.marker) map.removeLayer(route.marker);
                     if (route.startMarker) map.removeLayer(route.startMarker);
+                    if (route.infoLabel) map.removeLayer(route.infoLabel);  // 删除文字标注
                     if (route.routingControl) map.removeControl(route.routingControl);
                 });
                 routePolylines = [];
@@ -2760,104 +2762,115 @@
             const searchResults = document.getElementById('search-results');
             searchResults.innerHTML = '<p style="color: #667eea; text-align: center;">正在搜索...</p>';
 
-            // 使用高德地图地理编码 API
-            const apiKey = ''; // 如果有 API key 可以填写
-            const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(locationName)}&output=json&key=${apiKey}`;
+            // 使用 Nominatim (OpenStreetMap) 免费 API 进行全球搜索
+            // 无需 API key，支持全球地点搜索，返回 WGS84 坐标（与 Leaflet 兼容）
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=5&accept-language=zh-CN`;
             
-            // 由于跨域问题，我们使用简化的方法：直接在新疆范围内搜索常见地点
-            // 这里使用一个简化的坐标映射（实际项目中应该使用完整的地理编码服务）
-            const xinjiangLocations = {
-                '喀纳斯湖': [48.6319, 87.0378],
-                '喀纳斯': [48.6319, 87.0378],
-                '天山天池': [43.8869, 88.1231],
-                '天池': [43.8869, 88.1231],
-                '禾木': [48.5667, 87.4167],
-                '禾木村': [48.5667, 87.4167],
-                '可可托海': [46.9833, 89.5167],
-                '那拉提': [43.3167, 84.0167],
-                '那拉提草原': [43.3167, 84.0167],
-                '赛里木湖': [44.5833, 81.1667],
-                '独山子': [44.3167, 84.9000],
-                '独山子大峡谷': [44.3167, 84.9000],
-                '火焰山': [42.9167, 89.5167],
-                '葡萄沟': [42.9500, 89.2167],
-                '吐鲁番': [42.9500, 89.2167],
-                '乌鲁木齐': [43.8167, 87.6167],
-                '喀什': [39.4667, 75.9833],
-                '伊犁': [43.9167, 81.3167],
-                '阿勒泰': [47.8500, 88.1333],
-                '塔城': [46.7500, 82.9833],
-                '克拉玛依': [45.5833, 84.9000],
-                '五彩滩': [47.7833, 86.8000],
-                '魔鬼城': [46.1167, 85.7833],
-                '巴音布鲁克': [42.9833, 84.1500],
-                '库车': [41.7167, 82.9667],
-                '库尔勒': [41.7667, 86.1500]
-            };
+            console.log('🔍 使用 Nominatim (OSM) 搜索:', locationName);
+            console.log('请求 URL:', url);
+            
+            fetch(url, {
+                headers: {
+                    'User-Agent': 'XinjiangTravelApp/1.0'  // API 要求
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Nominatim 搜索响应:', data);
+                
+                if (!data || data.length === 0) {
+                    searchResults.innerHTML = '<p style="color: #e74c3c; text-align: center;">❌ 未找到相关地点，请尝试其他名称</p>';
+                    return;
+                }
+                
+                // 显示搜索结果
+                let resultsHtml = '<div style="max-height: 300px; overflow-y: auto;">';
+                data.forEach((item, index) => {
+                    const displayName = item.display_name || item.name || locationName;
+                    // Nominatim 返回 WGS84 坐标，可以直接使用
+                    const lat = parseFloat(item.lat);
+                    const lon = parseFloat(item.lon);
+                    const type = item.type || '地点';
+                    
+                    console.log(`地点 ${index}:`, {
+                        name: displayName,
+                        wgs: [lat, lon]
+                    });
+                    
+                    resultsHtml += `
+                        <div style="padding: 12px; margin: 8px 0; background: ${index === 0 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; 
+                                    border-radius: 8px; cursor: pointer; transition: all 0.3s; color: ${index === 0 ? 'white' : '#333'};"
+                             onmouseover="this.style.transform='translateX(5px)'" 
+                             onmouseout="this.style.transform='translateX(0)'"
+                             onclick="selectSearchResult(${lat}, ${lon}, '${displayName.replace(/'/g, "\\'")}')">
+                            <div style="font-weight: bold; margin-bottom: 5px;">${index === 0 ? '📍 ' : ''}${displayName}</div>
+                            <div style="font-size: 12px; opacity: ${index === 0 ? '0.9' : '0.7'};">${type} · ${displayName.substring(0, 80)}${displayName.length > 80 ? '...' : ''}</div>
+                        </div>
+                    `;
+                });
+                resultsHtml += '</div>';
+                resultsHtml += '<p style="color: #999; font-size: 12px; text-align: center; margin-top: 10px;">💡 点击任意结果即可添加到地图</p>';
+                
+                searchResults.innerHTML = resultsHtml;
+            })
+            .catch(error => {
+                console.error('搜索失败:', error);
+                searchResults.innerHTML = '<p style="color: #e74c3c; text-align: center;">❌ 搜索失败，请检查网络连接</p>';
+            });
+        }
 
-            setTimeout(() => {
-                let found = false;
-                let coordinates = null;
-                
-                // 搜索匹配的地点
-                for (const [name, coords] of Object.entries(xinjiangLocations)) {
-                    if (locationName.toLowerCase().includes(name.toLowerCase()) || 
-                        name.toLowerCase().includes(locationName.toLowerCase())) {
-                        found = true;
-                        coordinates = coords;
-                        
-                        // 添加标记 - 使用地点图标
-                        const displayName = markerName || name;
-                        const randomColor = getRandomColor();
-                        const marker = L.marker([coords[0], coords[1]], {
-                            icon: L.divIcon({
-                                className: 'custom-div-icon',
-                                html: `
-                                    <div style="text-align: center;">
-                                        <div style="background-color: ${randomColor}; width: 30px; height: 40px; border-radius: 50% 50% 50% 0; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); margin: 0 auto; position: relative;">
-                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
-                                        </div>
-                                        <div style="background: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.2);">${displayName}</div>
-                                    </div>
-                                `,
-                                iconSize: [80, 50],
-                                iconAnchor: [40, 25]
-                            })
-                        }).addTo(map);
-                        
-                        // 保存标记信息包括颜色
-                        marker.markerData = {
-                            name: displayName,
-                            color: randomColor,
-                            latlng: L.latLng(coords[0], coords[1]),
-                            description: name
-                        };
-                        
-                        marker.bindPopup(`<b>${displayName}</b><br>${name}`);
-                        markers.push(marker);
-                        saveMapData();
-                        
-                        // 地图飞向该位置
-                        map.flyTo([coords[0], coords[1]], 10, {
-                            duration: 1.5
-                        });
-                        
-                        break;
-                    }
-                }
-                
-                if (found) {
-                    searchResults.innerHTML = `<p style="color: #2ecc71; text-align: center;">✓ 已找到并标记 "${markerName || locationName}"</p>`;
-                    setTimeout(() => {
-                        closeModal('location-search-modal');
-                        document.getElementById('location-name').value = '';
-                        document.getElementById('location-marker-name').value = '';
-                        searchResults.innerHTML = '';
-                    }, 1500);
-                } else {
-                    searchResults.innerHTML = `<p style="color: #e74c3c; text-align: center;">未找到该地点，请尝试使用"手动标记"功能</p>`;
-                }
-            }, 500);
+        // 选择搜索结果并添加到地图
+        function selectSearchResult(lat, lon, displayName) {
+            const markerName = document.getElementById('location-marker-name').value.trim() || displayName.split(',')[0];
+            const randomColor = getRandomColor();
+            
+            // 添加标记到地图
+            const marker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `
+                        <div style="text-align: center;">
+                            <div style="background-color: ${randomColor}; width: 30px; height: 40px; border-radius: 50% 50% 50% 0; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); margin: 0 auto; position: relative;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
+                            </div>
+                            <div style="background: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.2);">${markerName}</div>
+                        </div>
+                    `,
+                    iconSize: [80, 50],
+                    iconAnchor: [40, 25]
+                })
+            }).addTo(map);
+            
+            // 保存标记信息
+            marker.markerData = {
+                name: markerName,
+                color: randomColor,
+                latlng: L.latLng(lat, lon),
+                description: displayName,
+                type: 'marker'
+            };
+            
+            marker.bindPopup(`<b>${markerName}</b><br><small>${displayName}</small>`);
+            markers.push(marker);
+            saveMapData();
+            
+            // 地图飞向该位置
+            map.flyTo([lat, lon], 12, {
+                duration: 1.5
+            });
+            
+            // 显示成功提示
+            const searchResults = document.getElementById('search-results');
+            searchResults.innerHTML = `<p style="color: #2ecc71; text-align: center;">✅ 已添加 "${markerName}" 到地图</p>`;
+            
+            // 清空输入框
+            document.getElementById('location-name').value = '';
+            document.getElementById('location-marker-name').value = '';
         }
 
         function closeModal(modalId) {
@@ -2912,156 +2925,420 @@
             };
             loadingTip.addTo(map);
             
-            // 使用 Leaflet Routing Machine 进行路径规划
+            // 使用高德地图 API 进行路径规划（中国境内最稳定）
             const startPoint = selectedLocations[0].latlng;
             const endPoint = selectedLocations[1].latlng;
             
             let routeCalculated = false;  // 标记是否已计算路线
             
-            // 创建路径规划控制器（不立即添加到地图）
-            // 使用 OSRM 的公共服务器
-            const routingControl = L.Routing.control({
-                waypoints: [
-                    L.latLng(startPoint.lat, startPoint.lng),
-                    L.latLng(endPoint.lat, endPoint.lng)
-                ],
-                routeWhileDragging: false,
-                show: false,  // 不显示导航面板
-                addWaypoints: false,  // 不允许添加途经点
-                draggableWaypoints: false,  // 不允许拖拽途经点
-                fitSelectedRoutes: false,  // 不自动缩放
-                createMarker: function() { return null; },  // 不创建默认标记
-                lineOptions: {
-                    styles: [
-                        {
-                            color: routeColor,
-                            opacity: 0.8,
-                            weight: 5,
-                            dashArray: '10, 10'
-                        }
-                    ]
-                },
-                // 使用 OSRM 公共服务器
-                serviceUrl: 'https://router.project-osrm.org/',
-                profile: 'driving',  // 使用驾车模式
-                timeout: 10000  // 10 秒超时
-            });
+            // 创建路径规划控制器
+            console.log('🚗 开始路径规划:', selectedLocations[0].name, '→', selectedLocations[1].name);
+            console.log('起点坐标:', startPoint);
+            console.log('终点坐标:', endPoint);
             
-            // 监听路线找到事件
-            routingControl.on('routesfound', function(e) {
+            // 高德地图 API 配置
+            const AMAP_KEY = 'e51cb6ce3b7441998f907cf1193b6727';
+            const startLng = startPoint.lng.toFixed(6);
+            const startLat = startPoint.lat.toFixed(6);
+            const endLng = endPoint.lng.toFixed(6);
+            const endLat = endPoint.lat.toFixed(6);
+            
+            console.log('🗺️ 使用高德地图 API 进行路径规划');
+            console.log('起点：', selectedLocations[0].name, `(${startLat}, ${startLng})`);
+            console.log('终点：', selectedLocations[1].name, `(${endLat}, ${endLng})`);
+            
+            // 调用高德地图路径规划 API
+            const apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${startLng},${startLat}&destination=${endLng},${endLat}&key=${AMAP_KEY}&extensions=all&output=json`;
+            
+            console.log('请求 URL:', apiUrl);
+            
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('高德 API 响应:', data);
+                    
+                    if (data.status === '1' && data.route && data.route.paths && data.route.paths.length > 0) {
+                        // 路径规划成功
+                        const route = data.route.paths[0];
+                        const distance = parseInt(route.distance);  // 单位：米
+                        const duration = parseInt(route.duration);  // 单位：秒
+                        
+                        console.log('✅ 路径规划成功！');
+                        console.log('距离：', distance, '米');
+                        console.log('时间：', duration, '秒');
+                        
+                        // 使用 Leaflet Routing Machine 直接绘制路线
+                        console.log('🗺️ 使用 Leaflet Routing Machine 绘制路线...');
+                        
+                        // 清除之前的路线
+                        if (window.routingControl) {
+                            map.removeControl(window.routingControl);
+                            window.routingControl = null;
+                        }
+                        
+                        // 创建路线控制器
+                        window.routingControl = L.Routing.control({
+                            waypoints: [
+                                L.latLng(startPoint.lat, startPoint.lng),
+                                L.latLng(endPoint.lat, endPoint.lng)
+                            ],
+                            routeWhileDragging: false,
+                            showAlternatives: false,
+                            fitSelectedRoutes: true,
+                            lineOptions: {
+                                styles: [
+                                    {color: routeColor, opacity: 0.8, weight: 5, dashArray: '10, 10'}
+                                ]
+                            },
+                            createMarker: function(i, wp, nWps) {
+                                // 自定义标记
+                                if (i === 0 || i === nWps - 1) {
+                                    return L.marker(wp.latLng, {
+                                        icon: L.divIcon({
+                                            className: 'custom-div-icon',
+                                            html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                                            iconSize: [20, 20],
+                                            iconAnchor: [10, 10]
+                                        })
+                                    });
+                                }
+                                return null;  // 不显示中间点标记
+                            },
+                            formatter: L.Routing.Formatter.extend({
+                                formatInstruction: function(instr, format) {
+                                    return null;  // 隐藏导航指令
+                                }
+                            })
+                        }).addTo(map);
+                        
+                        // 监听路线找到事件
+                        window.routingControl.on('routesfound', function(e) {
+                            const routes = e.routes;
+                            if (routes && routes.length > 0) {
+                                const route = routes[0];
+                                const coordinates = route.coordinates.map(coord => [coord.lat, coord.lng]);
+                                const distance = route.summary.totalDistance;
+                                const duration = route.summary.totalTime;
+                                
+                                console.log('✅ 路线规划成功！');
+                                console.log('距离:', distance, '米');
+                                console.log('时间:', duration, '秒');
+                                console.log('坐标数:', coordinates.length);
+                                
+                                // 保存路线数据
+                                drawRoute(coordinates, distance, duration);
+                            }
+                        });
+                        
+                        // 隐藏默认的路线面板
+                        const container = document.querySelector('.leaflet-routing-container');
+                        if (container) {
+                            container.style.display = 'none';
+                        }
+                        
+                        return;  // 跳过原来的 drawRoute 调用
+                    } else {
+                        // API 返回错误
+                        console.error('❌ 高德 API 返回错误:', data);
+                        throw new Error(data.info || '路径规划失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ 路径规划失败:', error);
+                    
+                    if (!routeCalculated) {
+                        routeCalculated = true;
+                        
+                        map.removeControl(loadingTip);
+                        
+                        // 回退到直线连接
+                        const failTip = L.control({position: 'topright'});
+                        failTip.onAdd = function() {
+                            const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+                            div.style.cssText = 'background: #f39c12; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                            div.innerHTML = '⚠️ 路线服务不可用，使用直线连接';
+                            return div;
+                        };
+                        failTip.addTo(map);
+                        
+                        setTimeout(() => {
+                            map.removeControl(failTip);
+                            confirmRouteWithLine();
+                        }, 1500);
+                    }
+                });
+            
+            // 解码高德地图的 polyline 编码
+            // 使用 Leaflet 官方的解码方法
+            function decodePolyline(polyline) {
+                // 使用 Leaflet Routing Machine 的解码方法
+                // 高德使用与 Google 相同的 polyline 编码格式
+                const coordinates = [];
+                let index = 0, lat = 0, lng = 0;
+                
+                while (index < polyline.length) {
+                    // 解码纬度
+                    let b, shift = 0, result = 0;
+                    do {
+                        b = polyline.charCodeAt(index++) - 63;
+                        result |= (b & 0x1f) << shift;
+                        shift += 5;
+                    } while (b >= 0x20);
+                    const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                    lat += dlat;
+                    
+                    // 解码经度
+                    shift = 0;
+                    result = 0;
+                    do {
+                        b = polyline.charCodeAt(index++) - 63;
+                        result |= (b & 0x1f) << shift;
+                        shift += 5;
+                    } while (b >= 0x20);
+                    const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                    lng += dlng;
+                    
+                    // 高德坐标除以 1e6 得到实际经纬度（已经是 WGS84）
+                    coordinates.push([lat / 1e6, lng / 1e6]);
+                }
+                
+                return coordinates;
+            }
+            
+            // GCJ02 转 WGS84 坐标转换函数
+            // 高德地图使用 GCJ02 坐标，Leaflet 使用 WGS84 坐标
+            // 必须进行转换才能正确显示
+            function gcj02ToWgs84(gcjLat, gcjLng) {
+                const PI = 3.14159265358979323846;
+                const a = 6378245.0;
+                const ee = 0.00669342162296594323;
+                
+                // 判断是否在中国境内
+                if (gcjLng < 72.004 || gcjLng > 137.8347 || gcjLat < 0.8293 || gcjLat > 55.8271) {
+                    return [gcjLat, gcjLng];
+                }
+                
+                // 计算偏移量（单位：度）
+                const dLat = transformLat(gcjLng - 105.0, gcjLat - 35.0);
+                const dLng = transformLng(gcjLng - 105.0, gcjLat - 35.0);
+                
+                const radLat = gcjLat / 180.0 * PI;
+                const magic = Math.sin(radLat);
+                const sqrtMagic = Math.sqrt(1 - ee * magic * magic);
+                
+                // 将米转换为度
+                const latScale = 180.0 / ((a * (1 - ee)) / (magic * sqrtMagic) * PI);
+                const lngScale = 180.0 / (a / sqrtMagic * Math.cos(radLat) * PI);
+                
+                const wgsLat = gcjLat - dLat * latScale;
+                const wgsLng = gcjLng - dLng * lngScale;
+                
+                return [wgsLat, wgsLng];
+            }
+            
+            // 辅助函数：转换纬度（返回米）
+            function transformLat(x, y) {
+                let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+                ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+                ret += (20.0 * Math.sin(y * Math.PI) + 40.0 * Math.sin(y / 3.0 * Math.PI)) * 2.0 / 3.0;
+                ret += (160.0 * Math.sin(y / 12.0 * Math.PI) + 320 * Math.sin(y * Math.PI / 30.0)) * 2.0 / 3.0;
+                return ret;
+            }
+            
+            // 辅助函数：转换经度（返回米）
+            function transformLng(x, y) {
+                let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+                ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0;
+                ret += (20.0 * Math.sin(x * Math.PI) + 40.0 * Math.sin(x / 3.0 * Math.PI)) * 2.0 / 3.0;
+                ret += (150.0 * Math.sin(x / 12.0 * Math.PI) + 300.0 * Math.sin(x / 30.0 * Math.PI)) * 2.0 / 3.0;
+                return ret;
+            }
+            
+            // 绘制路线函数
+            function drawRoute(coordinates, distance, duration) {
                 if (routeCalculated) return;
                 routeCalculated = true;
                 
                 map.removeControl(loadingTip);
                 
-                const routes = e.routes;
-                const summary = e.routes[0].summary;
+                // 保存地点名称（在清空前保存）
+                const startName = selectedLocations[0].name;
+                const endName = selectedLocations[1].name;
                 
-                console.log('路径规划成功:', summary);
-                console.log('路线坐标数:', routes[0].coordinates.length);
+                console.log('🎨 开始绘制路线...');
+                console.log('路线颜色:', routeColor);
+                console.log('路线坐标数:', coordinates.length);
+                console.log('起点坐标:', startPoint);
+                console.log('终点坐标:', endPoint);
+                console.log('前 10 个坐标点:', coordinates.slice(0, 10));
+                console.log('后 10 个坐标点:', coordinates.slice(-10));
                 
-                if (routes && routes.length > 0) {
-                    const route = routes[0];
-                    const coordinates = route.coordinates;
-                    
-                    const polyline = L.polyline(coordinates.map(coord => [coord.lat, coord.lng]), {
+                // 验证坐标数据
+                if (!coordinates || coordinates.length === 0) {
+                    console.error('❌ 坐标数据为空！');
+                    alert('路线坐标数据为空，无法绘制');
+                    return;
+                }
+                
+                // 验证坐标是否有效
+                const firstCoord = coordinates[0];
+                if (firstCoord.length !== 2) {
+                    console.error('❌ 坐标格式错误:', firstCoord);
+                    alert('坐标格式错误，无法绘制');
+                    return;
+                }
+                
+                console.log('✅ 坐标验证通过，开始绘制 polyline...');
+                
+                // 创建路线（使用实际坐标）
+                let polyline;  // 在 try 块外声明
+                try {
+                    polyline = L.polyline(coordinates, {
                         color: routeColor,
                         weight: 5,
                         opacity: 0.8,
                         dashArray: '10, 10'
                     }).addTo(map);
                     
-                    const startMarker = L.marker(startPoint, {
-                        icon: L.divIcon({
-                            className: 'custom-div-icon',
-                            html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 10]
-                        })
-                    }).addTo(map);
+                    console.log('✅ polyline 创建成功，图层 ID:', L.stamp(polyline));
+                    console.log('✅ polyline 边界:', polyline.getBounds());
                     
-                    const endMarker = L.marker(endPoint, {
-                        icon: L.divIcon({
-                            className: 'custom-div-icon',
-                            html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 10]
-                        })
-                    }).addTo(map);
-                    
-                    routePolylines.push({
-                        polyline: polyline,
-                        routingControl: routingControl,
-                        start: startPoint,
-                        end: endPoint,
-                        color: routeColor,
-                        date: routeStartDate,
-                        marker: endMarker,
-                        startMarker: startMarker,
-                        startName: selectedLocations[0].name,
-                        endName: selectedLocations[1].name,
-                        coordinates: coordinates.map(coord => [coord.lat, coord.lng]),
-                        distance: summary.totalDistance,
-                        time: summary.totalTime
-                    });
-                    
-                    saveRouteData();
-                    
-                    const distanceKm = (summary.totalDistance / 1000).toFixed(1);
-                    const timeMinutes = (summary.totalTime / 60).toFixed(0);
-                    
-                    selectedLocations = [];
-                    routeStartDate = null;
-                    routeColor = null;
-                    
-                    resetToolState();
-                    
-                    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-                    
-                    // 显示成功提示
-                    const successTip = L.control({position: 'topright'});
-                    successTip.onAdd = function() {
-                        const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
-                        div.style.cssText = 'background: #2ecc71; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
-                        div.innerHTML = `✅ 路线规划成功！<br>📍 ${selectedLocations[0].name} → ${selectedLocations[1].name}<br>📏 距离：约${distanceKm}公里<br>⏱️ 预计：${timeMinutes}分钟`;
-                        return div;
-                    };
-                    successTip.addTo(map);
-                    
-                    setTimeout(() => {
-                        map.removeControl(successTip);
-                    }, 3000);
+                    // 验证是否真的添加到地图
+                    if (map.hasLayer(polyline)) {
+                        console.log('✅ 路线已成功添加到地图图层');
+                    } else {
+                        console.error('❌ 路线未添加到地图图层！');
+                    }
+                } catch (error) {
+                    console.error('❌ 创建 polyline 失败:', error);
+                    alert('路线绘制失败：' + error.message);
+                    return;
                 }
-            });
-            
-            // 监听错误
-            routingControl.on('routingerror', function(e) {
-                if (routeCalculated) return;
-                routeCalculated = true;
                 
-                map.removeControl(loadingTip);
+                console.log('✅ 路线绘制完成');
                 
-                console.error('路径规划失败:', e);
-                console.error('错误详情:', e.error || e);
+                // 计算路线中间位置，用于显示距离和时间
+                const midIndex = Math.floor(coordinates.length / 2);
+                const midPoint = coordinates[midIndex];
                 
-                // 回退到直线连接
-                const failTip = L.control({position: 'topright'});
-                failTip.onAdd = function() {
+                // 格式化距离和时间
+                const distanceText = distance >= 1000 
+                    ? (distance / 1000).toFixed(1) + ' km' 
+                    : distance + ' m';
+                const timeText = duration >= 3600 
+                    ? (duration / 3600).toFixed(1) + ' h' 
+                    : Math.round(duration / 60) + ' min';
+                
+                // 创建文字标注（使用 DivIcon 显示在路线中间）
+                const routeInfo = L.divIcon({
+                    className: 'route-info-label',
+                    html: `
+                        <div style="
+                            background: white;
+                            border: 2px solid ${routeColor};
+                            border-radius: 8px;
+                            padding: 6px 10px;
+                            text-align: center;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            font-family: Arial, sans-serif;
+                            font-size: 13px;
+                            font-weight: bold;
+                            color: ${routeColor};
+                            white-space: nowrap;
+                            pointer-events: none;
+                        ">
+                            <div style="margin-bottom: 2px;">📍 ${distanceText}</div>
+                            <div style="font-size: 11px; opacity: 0.8;">⏱️ ${timeText}</div>
+                        </div>
+                    `,
+                    iconSize: [100, 50],
+                    iconAnchor: [50, 25]  // 中心点对齐
+                });
+                
+                // 将文字标注添加到地图中间位置
+                L.marker(midPoint, {
+                    icon: routeInfo,
+                    interactive: false  // 不可交互
+                }).addTo(map);
+                
+                console.log('✅ 路线信息标注完成:', distanceText, timeText);
+                
+                // 创建起点标记
+                const startMarker = L.marker(startPoint, {
+                    icon: L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    })
+                }).addTo(map);
+                
+                // 创建终点标记
+                const endMarker = L.marker(endPoint, {
+                    icon: L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: ${routeColor}; width: 15px; height: 15px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    })
+                }).addTo(map);
+                
+                console.log('✅ 标记绘制完成');
+                
+                // 保存路线信息
+                routePolylines.push({
+                    polyline: polyline,
+                    start: startPoint,
+                    end: endPoint,
+                    color: routeColor,
+                    date: routeStartDate,
+                    marker: endMarker,
+                    startMarker: startMarker,
+                    infoLabel: L.marker(midPoint, {
+                        icon: routeInfo,
+                        interactive: false
+                    }),  // 保存文字标注引用
+                    startName: startName,
+                    endName: endName,
+                    coordinates: coordinates,
+                    distance: distance,
+                    time: duration
+                });
+                
+                saveRouteData();
+                
+                const distanceKm = (distance / 1000).toFixed(1);
+                const timeMinutes = (duration / 60).toFixed(0);
+                
+                // 清空选择
+                selectedLocations = [];
+                routeStartDate = null;
+                routeColor = null;
+                
+                resetToolState();
+                
+                console.log('✅ 路线数据已保存');
+                console.log('📏 距离:', distanceKm, '公里');
+                console.log('⏱️ 时间:', timeMinutes, '分钟');
+                console.log('🗺️ 当前地图上的图层数:', map._layers ? Object.keys(map._layers).length : '未知');
+                
+                // 显示成功提示
+                const successTip = L.control({position: 'topright'});
+                successTip.onAdd = function() {
                     const div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
-                    div.style.cssText = 'background: #f39c12; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
-                    div.innerHTML = '⚠️ 路线服务不可用，使用直线连接';
+                    div.style.cssText = 'background: #2ecc71; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 14px; color: white;';
+                    div.innerHTML = `✅ 路线规划成功！<br>📍 ${startName} → ${endName}<br>📏 距离：约${distanceKm}公里<br>⏱️ 预计：${timeMinutes}分钟`;
                     return div;
                 };
-                failTip.addTo(map);
+                successTip.addTo(map);
+                
+                console.log('✅ 成功提示已显示');
                 
                 setTimeout(() => {
-                    map.removeControl(failTip);
-                    confirmRouteWithLine();
-                }, 1500);
-            });
-            
-            // 手动添加到地图以触发路径计算
-            routingControl.addTo(map);
+                    map.removeControl(successTip);
+                    console.log('✅ 成功提示已移除');
+                }, 3000);
+            }
         }
         
         function confirmRouteWithLine() {
@@ -3074,6 +3351,10 @@
             
             const startPoint = selectedLocations[0].latlng;
             const endPoint = selectedLocations[1].latlng;
+            
+            // 保存地点名称（在清空前保存）
+            const startName = selectedLocations[0].name;
+            const endName = selectedLocations[1].name;
             
             const polyline = L.polyline([startPoint, endPoint], {
                 color: routeColor,
@@ -3111,17 +3392,20 @@
                 date: routeStartDate,
                 marker: endMarker,
                 startMarker: startMarker,
-                startName: selectedLocations[0].name,
-                endName: selectedLocations[1].name
+                startName: startName,
+                endName: endName
             });
             
             saveRouteData();
+            
+            // 清空选择
             selectedLocations = [];
             routeStartDate = null;
             routeColor = null;
             resetToolState();
+            
             map.flyTo(L.latLng((startPoint.lat + endPoint.lat) / 2, (startPoint.lng + endPoint.lng) / 2), 8, { duration: 1.5 });
-            alert(`路线已绘制完成！\n${selectedLocations[0].name} → ${selectedLocations[1].name}\n日期：${routeStartDate}（第${dayNum}天）\n距离：约${distanceKm.toFixed(1)}公里`);
+            alert(`路线已绘制完成！\n${startName} → ${endName}\n日期：${dayNum}天\n距离：约${distanceKm.toFixed(1)}公里`);
         }
 
         function saveRouteData() {
@@ -3173,6 +3457,47 @@
                         })
                     }).addTo(map);
                     
+                    // 添加距离和时间文字标注
+                    const midIndex = Math.floor(routeData.coordinates.length / 2);
+                    const midPoint = routeData.coordinates[midIndex];
+                    
+                    const distanceText = routeData.distance >= 1000 
+                        ? (routeData.distance / 1000).toFixed(1) + ' km' 
+                        : routeData.distance + ' m';
+                    const timeText = routeData.time >= 3600 
+                        ? (routeData.time / 3600).toFixed(1) + ' h' 
+                        : Math.round(routeData.time / 60) + ' min';
+                    
+                    const routeInfo = L.divIcon({
+                        className: 'route-info-label',
+                        html: `
+                            <div style="
+                                background: white;
+                                border: 2px solid ${routeData.color || '#e74c3c'};
+                                border-radius: 8px;
+                                padding: 6px 10px;
+                                text-align: center;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                font-family: Arial, sans-serif;
+                                font-size: 13px;
+                                font-weight: bold;
+                                color: ${routeData.color || '#e74c3c'};
+                                white-space: nowrap;
+                                pointer-events: none;
+                            ">
+                                <div style="margin-bottom: 2px;">📍 ${distanceText}</div>
+                                <div style="font-size: 11px; opacity: 0.8;">⏱️ ${timeText}</div>
+                            </div>
+                        `,
+                        iconSize: [100, 50],
+                        iconAnchor: [50, 25]
+                    });
+                    
+                    const infoLabel = L.marker(midPoint, {
+                        icon: routeInfo,
+                        interactive: false
+                    }).addTo(map);
+                    
                     routePolylines.push({
                         polyline: polyline,
                         start: L.latLng(routeData.start),
@@ -3181,6 +3506,7 @@
                         date: routeData.date,
                         marker: endMarker,
                         startMarker: startMarker,
+                        infoLabel: infoLabel,  // 保存文字标注引用
                         coordinates: routeData.coordinates,
                         distance: routeData.distance,
                         time: routeData.time
@@ -3212,6 +3538,49 @@
                         })
                     }).addTo(map);
                     
+                    // 添加距离和时间文字标注（直线情况）
+                    const midPoint = [
+                        (routeData.start[0] + routeData.end[0]) / 2,
+                        (routeData.start[1] + routeData.end[1]) / 2
+                    ];
+                    
+                    const distanceText = routeData.distance >= 1000 
+                        ? (routeData.distance / 1000).toFixed(1) + ' km' 
+                        : routeData.distance + ' m';
+                    const timeText = routeData.time >= 3600 
+                        ? (routeData.time / 3600).toFixed(1) + ' h' 
+                        : Math.round(routeData.time / 60) + ' min';
+                    
+                    const routeInfo = L.divIcon({
+                        className: 'route-info-label',
+                        html: `
+                            <div style="
+                                background: white;
+                                border: 2px solid ${routeData.color || '#e74c3c'};
+                                border-radius: 8px;
+                                padding: 6px 10px;
+                                text-align: center;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                font-family: Arial, sans-serif;
+                                font-size: 13px;
+                                font-weight: bold;
+                                color: ${routeData.color || '#e74c3c'};
+                                white-space: nowrap;
+                                pointer-events: none;
+                            ">
+                                <div style="margin-bottom: 2px;">📍 ${distanceText}</div>
+                                <div style="font-size: 11px; opacity: 0.8;">⏱️ ${timeText}</div>
+                            </div>
+                        `,
+                        iconSize: [100, 50],
+                        iconAnchor: [50, 25]
+                    });
+                    
+                    const infoLabel = L.marker(midPoint, {
+                        icon: routeInfo,
+                        interactive: false
+                    }).addTo(map);
+                    
                     routePolylines.push({
                         polyline: polyline,
                         start: L.latLng(routeData.start),
@@ -3219,7 +3588,8 @@
                         color: routeData.color,
                         date: routeData.date,
                         marker: endMarker,
-                        startMarker: startMarker
+                        startMarker: startMarker,
+                        infoLabel: infoLabel  // 保存文字标注引用
                     });
                 }
             });
@@ -3500,11 +3870,66 @@
                     const localTimestamp = localStorage.getItem(BACKUP_KEY);
                     const githubTimestamp = githubData.timestamp;
                     
+                    // 如果 GitHub 数据更新，智能合并到本地数据
                     if (!localTimestamp || (githubTimestamp && parseInt(githubTimestamp) > parseInt(localTimestamp))) {
-                        console.log(' GitHub 数据更新，同步到本地');
-                        appData = githubData;
+                        console.log(' GitHub 数据更新，开始智能合并...');
+                        
+                        // 1. 合并 days 数据：保留双方所有的日程
+                        if (githubData.days) {
+                            // 将 GitHub 的 days 合并到本地，保留本地已有的日程
+                            appData.days = {
+                                ...githubData.days,  // 先加载 GitHub 的
+                                ...appData.days      // 再用本地的覆盖（本地优先）
+                            };
+                            console.log(' 合并 days 数据完成');
+                        }
+                        
+                        // 2. 合并 map 数据：保留双方所有的标记点
+                        if (githubData.map && githubData.map.length > 0) {
+                            if (!appData.map || appData.map.length === 0) {
+                                // 本地没有标记，直接使用 GitHub 的
+                                appData.map = githubData.map;
+                            } else {
+                                // 本地有标记，合并双方标记点（去重）
+                                const existingKeys = new Set(
+                                    appData.map.map(m => `${m.latlng[0]},${m.latlng[1]},${m.name}`)
+                                );
+                                
+                                githubData.map.forEach(gm => {
+                                    const key = `${gm.latlng[0]},${gm.latlng[1]},${gm.name}`;
+                                    if (!existingKeys.has(key)) {
+                                        appData.map.push(gm);
+                                        existingKeys.add(key);
+                                    }
+                                });
+                            }
+                            console.log(' 合并 map 数据完成');
+                        }
+                        
+                        // 3. 合并 routes 数据：保留双方所有的路线
+                        if (githubData.routes && githubData.routes.length > 0) {
+                            if (!appData.routes || appData.routes.length === 0) {
+                                appData.routes = githubData.routes;
+                            } else {
+                                // 合并路线（简单去重：如果起点终点相同则跳过）
+                                const existingKeys = new Set(
+                                    appData.routes.map(r => `${r.start[0]},${r.start[1]}-${r.end[0]},${r.end[1]}`)
+                                );
+                                
+                                githubData.routes.forEach(gr => {
+                                    const key = `${gr.start[0]},${gr.start[1]}-${gr.end[0]},${gr.end[1]}`;
+                                    if (!existingKeys.has(key)) {
+                                        appData.routes.push(gr);
+                                        existingKeys.add(key);
+                                    }
+                                });
+                            }
+                            console.log(' 合并 routes 数据完成');
+                        }
+                        
                         saveToLocalStorage();
-                        return githubData;
+                        console.log('✅ 数据合并完成');
+                        return appData;
                     } else {
                         console.log('✓ 本地数据已是最新');
                         return appData;
