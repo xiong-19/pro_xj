@@ -8,6 +8,15 @@
       "food": [],
       "distance": "100",
       "other": ""
+    },
+    "2026-06-12": {
+      "route": [],
+      "start": null,
+      "destination": null,
+      "scenic": [],
+      "food": [],
+      "distance": "200",
+      "other": ""
     }
   },
   "map": [
@@ -1786,6 +1795,6 @@
       "time": 3958.4
     }
   ],
-  "timestamp": "1780665973996",
-  "lastModified": "2026-06-05T13:26:13.996Z"
+  "timestamp": "1780666053845",
+  "lastModified": "2026-06-05T13:27:33.845Z"
 }
