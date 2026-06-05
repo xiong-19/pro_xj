@@ -3866,9 +3866,22 @@
                 if (response.ok) {
                     const githubData = await response.json();
                     console.log('✓ 从 GitHub 加载数据成功');
+                    console.log(' GitHub 数据内容:', {
+                        hasDays: !!githubData.days,
+                        daysCount: githubData.days ? Object.keys(githubData.days).length : 0,
+                        hasMap: !!githubData.map,
+                        mapCount: githubData.map ? githubData.map.length : 0,
+                        hasRoutes: !!githubData.routes,
+                        routesCount: githubData.routes ? githubData.routes.length : 0,
+                        timestamp: githubData.timestamp,
+                        lastModified: githubData.lastModified
+                    });
                     
                     const localTimestamp = localStorage.getItem(BACKUP_KEY);
                     const githubTimestamp = githubData.timestamp;
+                    
+                    console.log(' 本地时间戳:', localTimestamp);
+                    console.log(' GitHub 时间戳:', githubTimestamp);
                     
                     // 如果 GitHub 数据更新，智能合并到本地数据
                     if (!localTimestamp || (githubTimestamp && parseInt(githubTimestamp) > parseInt(localTimestamp))) {
@@ -3929,9 +3942,19 @@
                         
                         saveToLocalStorage();
                         console.log('✅ 数据合并完成');
+                        console.log(' 合并后的数据:', {
+                            daysCount: appData.days ? Object.keys(appData.days).length : 0,
+                            mapCount: appData.map ? appData.map.length : 0,
+                            routesCount: appData.routes ? appData.routes.length : 0
+                        });
                         return appData;
                     } else {
                         console.log('✓ 本地数据已是最新');
+                        console.log(' 本地数据:', {
+                            daysCount: appData.days ? Object.keys(appData.days).length : 0,
+                            mapCount: appData.map ? appData.map.length : 0,
+                            routesCount: appData.routes ? appData.routes.length : 0
+                        });
                         return appData;
                     }
                 } else {
