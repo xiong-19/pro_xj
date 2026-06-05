@@ -7,7 +7,7 @@
         87.6139038
       ],
       "name": "乌鲁木齐市",
-      "color": "#e67e22",
+      "color": "#1abc9c",
       "description": "乌鲁木齐市, 新疆维吾尔自治区, 中国",
       "type": "marker",
       "content": "",
@@ -19,7 +19,7 @@
         81.180576
       ],
       "name": "赛里木湖",
-      "color": "#1abc9c",
+      "color": "#2ecc71",
       "description": "赛里木湖, 博乐市, 博尔塔拉蒙古自治州, 新疆维吾尔自治区, 中国",
       "type": "marker",
       "content": "",
@@ -125729,9 +125729,9 @@
         ]
       ],
       "distance": 559467,
-      "time": 22064
+      "time": 22110
     }
   ],
-  "timestamp": "1780650288336",
-  "lastModified": "2026-06-05T09:04:48.336Z"
+  "timestamp": "1780650593754",
+  "lastModified": "2026-06-05T09:09:53.754Z"
 }
